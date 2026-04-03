@@ -40,10 +40,10 @@ export function AuthCard({
   const isRegister = mode === "register";
   const helperText = useMemo(() => {
     if (!isRegister) {
-      return "Use the account you already created for your root node.";
+      return "Use the account you already created for your tree.";
     }
 
-    return "We’ll create your private tree and highlight you as the root person.";
+    return "We’ll create your private tree and place you at the center.";
   }, [isRegister]);
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -89,15 +89,21 @@ export function AuthCard({
       <p className="text-xs font-semibold tracking-[0.22em] text-[var(--accent-strong)] uppercase">
         {eyebrow}
       </p>
-      <h1 className="mt-4 font-serif-display text-4xl text-[var(--ink-strong)]">{title}</h1>
-      <p className="mt-3 text-sm leading-7 text-[var(--ink-soft)]">{description}</p>
-      <p className="mt-4 text-xs leading-6 text-[var(--ink-soft)]">{helperText}</p>
+      <h1 className="mt-4 font-serif-display text-4xl text-[var(--ink-strong)]">
+        {title}
+      </h1>
+      <p className="mt-3 text-sm leading-7 text-[var(--ink-soft)]">
+        {description}
+      </p>
+      <p className="mt-4 text-xs leading-6 text-[var(--ink-soft)]">
+        {helperText}
+      </p>
       <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
         {isRegister ? (
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-[var(--ink-strong)]">
-                First name
+                Name
               </span>
               <input
                 name="firstName"
@@ -117,14 +123,16 @@ export function AuthCard({
                 value={formValues.lastName}
                 onChange={handleChange}
                 type="text"
-                placeholder="Rivera"
+                placeholder="Optional"
                 className="w-full rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
               />
             </label>
           </div>
         ) : null}
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-[var(--ink-strong)]">Email</span>
+          <span className="mb-2 block text-sm font-medium text-[var(--ink-strong)]">
+            Email
+          </span>
           <input
             name="email"
             value={formValues.email}
@@ -135,13 +143,17 @@ export function AuthCard({
           />
         </label>
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-[var(--ink-strong)]">Password</span>
+          <span className="mb-2 block text-sm font-medium text-[var(--ink-strong)]">
+            Password
+          </span>
           <input
             name="password"
             value={formValues.password}
             onChange={handleChange}
             type="password"
-            placeholder={isRegister ? "At least 8 characters" : "Enter your password"}
+            placeholder={
+              isRegister ? "At least 8 characters" : "Enter your password"
+            }
             className="w-full rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
           />
         </label>
@@ -160,7 +172,10 @@ export function AuthCard({
       </form>
       <p className="mt-6 text-sm text-[var(--ink-soft)]">
         {alternateText}{" "}
-        <Link href={alternateHref} className="font-semibold text-[var(--accent-strong)]">
+        <Link
+          href={alternateHref}
+          className="font-semibold text-[var(--accent-strong)]"
+        >
           {alternateLabel}
         </Link>
       </p>

@@ -288,7 +288,7 @@ func sanitizeRegisterInput(input RegisterInput) RegisterInput {
 }
 
 func validateRegisterInput(input RegisterInput) error {
-	if input.FirstName == "" || input.LastName == "" || input.Email == "" {
+	if input.FirstName == "" || input.Email == "" {
 		return ErrInvalidRegistration
 	}
 

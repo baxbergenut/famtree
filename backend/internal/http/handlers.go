@@ -57,7 +57,7 @@ func registerHandler(cfg config.Config, authService *auth.Service) http.HandlerF
 			case errors.Is(err, auth.ErrEmailTaken):
 				writeError(w, http.StatusConflict, err.Error())
 			case errors.Is(err, auth.ErrInvalidRegistration):
-				writeError(w, http.StatusBadRequest, "first name, last name, email, and a password of at least 8 characters are required")
+				writeError(w, http.StatusBadRequest, "name, email, and a password of at least 8 characters are required")
 			default:
 				writeError(w, http.StatusInternalServerError, "failed to register user")
 			}
@@ -227,7 +227,7 @@ func createRelativeHandler(cfg config.Config, authService *auth.Service, treeSer
 			case errors.Is(err, tree.ErrInvalidRelation):
 				writeError(w, http.StatusBadRequest, "relation must be either parent or child")
 			case errors.Is(err, tree.ErrInvalidPersonInput):
-				writeError(w, http.StatusBadRequest, "first name and last name are required")
+				writeError(w, http.StatusBadRequest, "name is required")
 			case errors.Is(err, tree.ErrParentLimitReached):
 				writeError(w, http.StatusBadRequest, "this person already has two parents")
 			case errors.Is(err, tree.ErrPersonNotFound):

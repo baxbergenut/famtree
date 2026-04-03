@@ -21,6 +21,8 @@ export function PersonNodePreview({
   onAddParent,
   onAddChild,
 }: PersonNodePreviewProps) {
+  const fullName = [firstName, lastName].filter(Boolean).join(" ");
+
   return (
     <article
       onPointerDown={onPointerDown}
@@ -60,7 +62,7 @@ export function PersonNodePreview({
           </div>
           <div>
             <p className="text-lg font-semibold text-[var(--ink-strong)]">
-              {firstName} {lastName}
+              {fullName}
             </p>
             {note ? (
               <p className="mt-1 text-sm text-[var(--ink-soft)]">{note}</p>
@@ -69,7 +71,7 @@ export function PersonNodePreview({
         </div>
         {highlighted ? (
           <span className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-[11px] font-semibold tracking-[0.18em] text-[var(--accent-strong)] uppercase">
-            Root
+            Me
           </span>
         ) : null}
       </div>

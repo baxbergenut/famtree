@@ -221,7 +221,7 @@ func (s *Service) GetGraphByOwnerUserID(ctx context.Context, ownerUserID string)
 }
 
 func (s *Service) CreateRelative(ctx context.Context, ownerUserID string, input CreateRelativeInput) (Graph, error) {
-	if input.AnchorPersonID == "" || input.FirstName == "" || input.LastName == "" {
+	if input.AnchorPersonID == "" || input.FirstName == "" {
 		return Graph{}, ErrInvalidPersonInput
 	}
 

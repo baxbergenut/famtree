@@ -4,13 +4,13 @@ Modern family tree builder for creating and exploring a personal family graph on
 
 ## Status
 
-This repository is currently in the planning and setup stage.
+The repository now contains the first implementation scaffold:
 
-The first implementation milestone is to create:
+- `frontend/` Next.js app shell
+- `backend/` Go API with PostgreSQL-backed auth/session endpoints
+- planning docs and contributor guidance
 
-- a `frontend/` Next.js app
-- a `backend/` Go API
-- shared project documentation and local development tooling
+The next milestone is to expand tree CRUD, canvas persistence, and media handling on top of the working auth flow.
 
 ## Product vision
 
@@ -69,6 +69,44 @@ famtree/
   AGENTS.md
 ```
 
+## Local development
+
+### Frontend
+
+```bash
+cd frontend
+npm run dev
+```
+
+Runs the Next.js app on `http://localhost:3000`.
+
+### Backend
+
+```bash
+cd backend
+go run ./cmd/api
+```
+
+Runs the Go API on `http://localhost:8081` by default.
+
+### Environment files
+
+- Frontend example env: `frontend/.env.example`
+- Backend example env: `backend/.env.example`
+- Database bootstrap SQL: `init.sql`
+
+### PostgreSQL setup
+
+1. Create the `famtree` database.
+2. Apply `init.sql` to create the initial schema.
+3. Set `DATABASE_URL` for the backend before starting the API.
+
+There is also a helper script:
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/init-db.ps1
+```
+
 ## High-level technical approach
 
 - Use a monorepo with separate frontend and backend folders.
@@ -105,7 +143,10 @@ famtree/
 
 ## Next steps
 
-- Create the `frontend/` and `backend/` applications
-- Add local development scripts and environment templates
-- Define the first API contract and database migrations
-- Implement authentication before the canvas workspace
+- Implement person and relationship write APIs
+- Connect the canvas workspace to live tree data
+- Add image upload and media persistence
+
+## Planning docs
+
+- Detailed implementation plan: [`docs/implementation-plan.md`](docs/implementation-plan.md)

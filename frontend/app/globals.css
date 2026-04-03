@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f6f1ea;
+  --foreground: #2f2722;
+  --surface-panel: rgba(250, 245, 238, 0.78);
+  --surface-muted: #f1e7d8;
+  --line-soft: rgba(110, 89, 67, 0.14);
+  --line-strong: rgba(110, 89, 67, 0.24);
+  --ink-strong: #2f2722;
+  --ink-soft: #6d5a49;
+  --accent-strong: #9e6f37;
+  --accent-soft: #eedec6;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-manrope);
+  --font-serif-display: var(--font-cormorant);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background:
+    radial-gradient(circle at top, rgba(255, 247, 236, 0.92), transparent 36%),
+    linear-gradient(180deg, #fbf7f0 0%, #f3ece2 100%);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-manrope), sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.canvas-surface {
+  background:
+    linear-gradient(rgba(145, 124, 103, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(145, 124, 103, 0.07) 1px, transparent 1px),
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.9), rgba(244, 235, 224, 0.85));
+  background-size: 48px 48px, 48px 48px, 100% 100%;
+  background-position: -1px -1px, -1px -1px, center;
+}

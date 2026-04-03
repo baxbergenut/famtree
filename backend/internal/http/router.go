@@ -41,6 +41,8 @@ func NewRouter(cfg config.Config, db *sql.DB) http.Handler {
 			authRouter.Get("/me", meHandler(cfg, authService))
 		})
 		r.Get("/tree", treeHandler(cfg, authService, treeService))
+		r.Get("/tree/graph", graphHandler(cfg, authService, treeService))
+		r.Post("/persons/relative", createRelativeHandler(cfg, authService, treeService))
 	})
 
 	return router

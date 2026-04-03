@@ -37,6 +37,39 @@ export type TreeSummary = {
   };
 };
 
+export type PersonNode = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  note?: string;
+  birthDate?: string;
+  x: number;
+  y: number;
+  isRoot: boolean;
+};
+
+export type PersonRelationship = {
+  id: string;
+  parentPersonId: string;
+  childPersonId: string;
+};
+
+export type TreeGraph = {
+  treeId: string;
+  rootPersonId: string;
+  persons: PersonNode[];
+  relationships: PersonRelationship[];
+};
+
+export type CreateRelativePayload = {
+  anchorPersonId: string;
+  relation: "parent" | "child";
+  firstName: string;
+  lastName: string;
+  note?: string;
+  birthDate?: string;
+};
+
 type ApiError = {
   error?: string;
 };
@@ -114,4 +147,33 @@ export async function getCurrentTree(): Promise<TreeSummary | null> {
 
   const data = await parseResponse<{ tree: TreeSummary }>(response);
   return data.tree;
+}
+
+export async function getTreeGraph(): Promise<TreeGraph | null> {
+  const response = await fetch(`${API_BASE_URL}/v1/tree/graph`, {
+    credentials: "include",
+  });
+
+  if (response.status === 401) {
+    return null;
+  }
+
+  const data = await parseResponse<{ graph: TreeGraph }>(response);
+  return data.graph;
+}
+
+export async function createRelative(
+  payload: CreateRelativePayload,
+): Promise<TreeGraph> {
+  const response = await fetch(`${API_BASE_URL}/v1/persons/relative`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await parseResponse<{ graph: TreeGraph }>(response);
+  return data.graph;
 }

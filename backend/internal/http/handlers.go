@@ -157,6 +157,89 @@ func treeHandler(cfg config.Config, authService *auth.Service, treeService *tree
 	}
 }
 
+func graphHandler(cfg config.Config, authService *auth.Service, treeService *tree.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := authService.CurrentUser(r.Context(), readSessionToken(r, cfg))
+		if err != nil {
+			if errors.Is(err, auth.ErrUnauthorized) {
+				writeError(w, http.StatusUnauthorized, "not authenticated")
+				return
+			}
+			writeError(w, http.StatusInternalServerError, "failed to load session")
+			return
+		}
+
+		graph, err := treeService.GetGraphByOwnerUserID(r.Context(), user.UserID)
+		if err != nil {
+			if errors.Is(err, tree.ErrTreeNotFound) {
+				writeError(w, http.StatusNotFound, "tree not found")
+				return
+			}
+			writeError(w, http.StatusInternalServerError, "failed to load tree graph")
+			return
+		}
+
+		writeJSON(w, http.StatusOK, map[string]any{
+			"graph": graph,
+		})
+	}
+}
+
+func createRelativeHandler(cfg config.Config, authService *auth.Service, treeService *tree.Service) http.HandlerFunc {
+	type request struct {
+		AnchorPersonID string  `json:"anchorPersonId"`
+		Relation       string  `json:"relation"`
+		FirstName      string  `json:"firstName"`
+		LastName       string  `json:"lastName"`
+		Note           *string `json:"note"`
+		BirthDate      *string `json:"birthDate"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := authService.CurrentUser(r.Context(), readSessionToken(r, cfg))
+		if err != nil {
+			if errors.Is(err, auth.ErrUnauthorized) {
+				writeError(w, http.StatusUnauthorized, "not authenticated")
+				return
+			}
+			writeError(w, http.StatusInternalServerError, "failed to load session")
+			return
+		}
+
+		var payload request
+		if err := readJSON(r, &payload); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid request body")
+			return
+		}
+
+		graph, err := treeService.CreateRelative(r.Context(), user.UserID, tree.CreateRelativeInput{
+			AnchorPersonID: payload.AnchorPersonID,
+			Relation:       payload.Relation,
+			FirstName:      payload.FirstName,
+			LastName:       payload.LastName,
+			Note:           payload.Note,
+			BirthDate:      payload.BirthDate,
+		})
+		if err != nil {
+			switch {
+			case errors.Is(err, tree.ErrInvalidRelation):
+				writeError(w, http.StatusBadRequest, "relation must be either parent or child")
+			case errors.Is(err, tree.ErrParentLimitReached):
+				writeError(w, http.StatusBadRequest, "this person already has two parents")
+			case errors.Is(err, tree.ErrPersonNotFound):
+				writeError(w, http.StatusNotFound, "anchor person not found")
+			default:
+				writeError(w, http.StatusInternalServerError, "failed to create relative")
+			}
+			return
+		}
+
+		writeJSON(w, http.StatusCreated, map[string]any{
+			"graph": graph,
+		})
+	}
+}
+
 func setSessionCookie(w http.ResponseWriter, cfg config.Config, token string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     cfg.SessionCookie,

@@ -3,6 +3,9 @@ type PersonNodePreviewProps = {
   lastName: string;
   note?: string;
   highlighted?: boolean;
+  compact?: boolean;
+  onAddParent?: () => void;
+  onAddChild?: () => void;
 };
 
 export function PersonNodePreview({
@@ -10,11 +13,15 @@ export function PersonNodePreview({
   lastName,
   note,
   highlighted = false,
+  compact = false,
+  onAddParent,
+  onAddChild,
 }: PersonNodePreviewProps) {
   return (
     <article
       className={[
-        "w-64 rounded-[28px] border bg-white/88 p-5 shadow-[0_24px_80px_rgba(34,27,22,0.12)] backdrop-blur",
+        compact ? "w-60" : "w-64",
+        "rounded-[28px] border bg-white/88 p-5 shadow-[0_24px_80px_rgba(34,27,22,0.12)] backdrop-blur",
         highlighted
           ? "border-[var(--accent-strong)] ring-2 ring-[var(--accent-soft)]"
           : "border-[var(--line-soft)]",
@@ -48,7 +55,9 @@ export function PersonNodePreview({
             <p className="text-lg font-semibold text-[var(--ink-strong)]">
               {firstName} {lastName}
             </p>
-            {note ? <p className="mt-1 text-sm text-[var(--ink-soft)]">{note}</p> : null}
+            {note ? (
+              <p className="mt-1 text-sm text-[var(--ink-soft)]">{note}</p>
+            ) : null}
           </div>
         </div>
         {highlighted ? (
@@ -57,21 +66,24 @@ export function PersonNodePreview({
           </span>
         ) : null}
       </div>
-      <div className="mt-5 flex gap-2">
-        <button
-          type="button"
-          className="rounded-full border border-[var(--line-soft)] px-3 py-2 text-xs font-medium text-[var(--ink-soft)]"
-        >
-          Add parent
-        </button>
-        <button
-          type="button"
-          className="rounded-full border border-[var(--line-soft)] px-3 py-2 text-xs font-medium text-[var(--ink-soft)]"
-        >
-          Add child
-        </button>
-      </div>
+      {(onAddParent || onAddChild) ? (
+        <div className="mt-5 flex gap-2">
+          <button
+            type="button"
+            onClick={onAddParent}
+            className="rounded-full border border-[var(--line-soft)] px-3 py-2 text-xs font-medium text-[var(--ink-soft)] transition hover:border-[var(--accent-strong)] hover:bg-[var(--accent-soft)]"
+          >
+            Add parent
+          </button>
+          <button
+            type="button"
+            onClick={onAddChild}
+            className="rounded-full border border-[var(--line-soft)] px-3 py-2 text-xs font-medium text-[var(--ink-soft)] transition hover:border-[var(--accent-strong)] hover:bg-[var(--accent-soft)]"
+          >
+            Add child
+          </button>
+        </div>
+      ) : null}
     </article>
   );
 }
-

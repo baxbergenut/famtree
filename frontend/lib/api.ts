@@ -48,17 +48,17 @@ export type PersonNode = {
   isRoot: boolean;
 };
 
-export type FamilyUnit = {
+export type UnionNode = {
   id: string;
-  parentPersonIds: string[];
-  childPersonIds: string[];
+  parentIds: string[];
+  childIds: string[];
 };
 
 export type TreeGraph = {
   treeId: string;
   rootPersonId: string;
   persons: PersonNode[];
-  familyUnits: FamilyUnit[];
+  unions: UnionNode[];
 };
 
 export type CreateRelativePayload = {
@@ -162,8 +162,8 @@ export async function getTreeGraph(): Promise<TreeGraph | null> {
   return {
     ...data.graph,
     persons: Array.isArray(data.graph.persons) ? data.graph.persons : [],
-    familyUnits: Array.isArray(data.graph.familyUnits)
-      ? data.graph.familyUnits
+    unions: Array.isArray(data.graph.unions)
+      ? data.graph.unions
       : [],
   };
 }
@@ -184,8 +184,8 @@ export async function createRelative(
   return {
     ...data.graph,
     persons: Array.isArray(data.graph.persons) ? data.graph.persons : [],
-    familyUnits: Array.isArray(data.graph.familyUnits)
-      ? data.graph.familyUnits
+    unions: Array.isArray(data.graph.unions)
+      ? data.graph.unions
       : [],
   };
 }

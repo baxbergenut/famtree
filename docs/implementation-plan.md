@@ -18,7 +18,7 @@ The scaffold currently supports:
 ### Frontend
 
 - Next.js App Router
-- client-side canvas workspace in React
+- client-side canvas workspace in React Flow
 - thin API client in `frontend/lib/api.ts`
 
 ### Backend
@@ -36,7 +36,7 @@ The scaffold currently supports:
 
 ## 3. Current domain model
 
-The family graph uses a shared parental unit instead of direct parent-to-child edges.
+The family graph uses explicit union nodes instead of direct parent-to-child edges.
 
 Core records:
 
@@ -52,15 +52,16 @@ Core records:
 Why this model:
 
 - two parents can share the same children without duplicating edges
-- the UI can render a partner line once and attach children to the shared connector
-- the backend can enforce a cleaner rule set around one-or-two-parent units
+- the backend stays normalized around person and union records
+- the frontend can render the graph directly in React Flow as a DAG
+- the backend can enforce a cleaner rule set around one-or-two-parent unions
 
 Current MVP constraints:
 
 - one private tree per user
 - one explicit root person per tree
-- one child belongs to one family unit
-- one family unit has at most two parents
+- one child belongs to one union
+- one union has at most two parents
 - note fields stay informational and are not structural
 
 ## 4. Current fetch and render flow
@@ -77,19 +78,16 @@ The graph response contains:
 - `treeId`
 - `rootPersonId`
 - `persons`
-- `familyUnits`
+- `unions`
 
 ### Render
 
 The canvas:
 
 1. centers on `rootPersonId`
-2. renders each person card at its persisted `x` and `y`
-3. renders each family unit as:
-   - parent drops to a shared partner line
-   - a central trunk
-   - a sibling bar
-   - child drops to each child card
+2. renders each person as a custom React Flow node
+3. derives union-node positions from the connected people
+4. renders `person -> union -> person` edges through React Flow
 
 ### Mutations
 
@@ -98,9 +96,9 @@ The canvas:
 
 Relative creation rules:
 
-- adding a parent reuses the child's existing family unit when available
-- adding a child reuses the parent's most recently active family unit when available
-- otherwise a new family unit is created automatically
+- adding a parent reuses the child's existing union when available
+- adding a child reuses the parent's most recently active union when available
+- otherwise a new union is created automatically
 
 ## 5. Implemented API surface
 
@@ -125,7 +123,7 @@ Relative creation rules:
 
 - editing person details after creation
 - photo upload and media association
-- explicit co-parent selection when one parent has multiple family units
+- explicit co-parent selection when one parent has multiple unions
 - deletion semantics
 - migrations beyond the bootstrap SQL
 - automated tests
@@ -143,10 +141,10 @@ Relative creation rules:
 - add upload validation and media association
 - render real profile photos with placeholder fallback
 
-### Phase 3: Family-unit controls
+### Phase 3: Union controls
 
-- support choosing which family unit a new child belongs to when a parent has multiple family groups
-- support editing and inspecting the family unit itself
+- support choosing which union a new child belongs to when a parent has multiple family groups
+- support editing and inspecting the union itself
 
 ### Phase 4: Hardening
 
@@ -156,7 +154,7 @@ Relative creation rules:
 
 ## 8. Risks to watch
 
-- a single parent may eventually need multiple family units, which will require explicit selection in the UI
-- deletion semantics will get tricky once several children share the same family unit
+- a single parent may eventually need multiple unions, which will require explicit selection in the UI
+- deletion semantics will get tricky once several children share the same union
 - canvas rendering will need optimization if tree sizes grow significantly
 - ownership checks must stay consistent on every graph mutation

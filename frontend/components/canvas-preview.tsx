@@ -71,7 +71,7 @@ export function CanvasPreview() {
         ))}
 
         <div className="absolute left-6 top-6 rounded-full border border-[var(--line-soft)] bg-white/80 px-4 py-2 text-xs font-medium text-[var(--ink-soft)] shadow-[0_12px_40px_rgba(31,27,24,0.12)] backdrop-blur">
-          Shared family connectors
+          Union-node preview
         </div>
         <div className="absolute bottom-6 right-6 flex gap-2 rounded-full border border-[var(--line-soft)] bg-white/80 p-2 shadow-[0_12px_40px_rgba(31,27,24,0.12)] backdrop-blur">
           <button type="button" className="rounded-full bg-[var(--surface-muted)] px-3 py-2 text-sm text-[var(--ink-soft)]">

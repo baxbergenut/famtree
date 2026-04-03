@@ -17,7 +17,7 @@ export default function Home() {
               A family tree workspace that starts with you.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-8 text-[var(--ink-soft)]">
-              `famtree` is a calm, modern canvas for mapping parents, children, and shared family units without forcing your family into a cramped form.
+              `famtree` is a calm, modern canvas for mapping parents, children, and union nodes without forcing your family into a cramped form.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
@@ -46,8 +46,8 @@ export default function Home() {
               text: "A new account opens on the signed-in user as the highlighted root person, centered and ready to expand.",
             },
             {
-              title: "Shared family units",
-              text: "Parents form a shared connector, and children hang from that unit so siblings read as one family instead of a pile of duplicate edges.",
+              title: "Union-node graph",
+              text: "Parents and children meet through explicit union nodes, which keeps the data clean and makes the rendered family graph easier to reason about.",
             },
             {
               title: "Photo-ready nodes",

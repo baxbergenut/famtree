@@ -31,32 +31,33 @@ Each person node supports:
 - stored birth date
 - reserved space for a profile photo with placeholder fallback in the UI
 
-## Structural rule: shared family units
+## Structural rule: union nodes
 
-The graph no longer models the tree as independent parent-to-child edges.
+The graph no longer models the tree as independent parent-to-child edges or ad hoc connector geometry.
 
-Instead, it uses a shared `family unit`:
+Instead, it uses explicit `union` nodes:
 
-- one family unit groups one or two parent people
-- children attach to that family unit
-- the canvas renders a line between the parents
-- the children connect to the shared family line, not to each parent separately
+- one union groups one or two parent people
+- children attach to that union
+- the frontend renders people and unions as a DAG in React Flow
+- edges run `person -> union -> person`
 
-This matches the visual model better and avoids duplicate child links when two parents share the same children.
+This is the standard family-tree graph pattern and avoids duplicating the same child connections for each parent.
 
 Current MVP behavior:
 
-- adding a parent to a child reuses that child's existing family unit when possible
-- adding a child from a parent reuses that parent's most recently active family unit, or creates one if needed
-- a child can belong to only one family unit in the current model
-- a family unit can have at most two parents
+- adding a parent to a child reuses that child's existing union when possible
+- adding a child from a parent reuses that parent's most recently active union, or creates one if needed
+- a child can belong to only one union in the current model
+- a union can have at most two parents
 
 ## Architecture
 
 ### Frontend
 
 - Framework: Next.js App Router
-- Responsibility: auth pages, protected workspace, canvas rendering, viewport interaction, and person creation flows
+- Graph rendering: React Flow with custom `person` and `union` nodes
+- Responsibility: auth pages, protected workspace, graph rendering, viewport interaction, and person creation flows
 
 ### Backend
 
@@ -86,9 +87,9 @@ Important rules:
 - each user owns exactly one tree in MVP
 - each tree stores its explicit `root_person_id`
 - `persons` store persisted canvas coordinates in `x` and `y`
-- `family_units` belong to a tree
-- `family_unit_parents` links people into a shared parental unit
-- `family_unit_children` links children to that unit
+- `family_units` store the union-node records in the database
+- `family_unit_parents` links people into a union
+- `family_unit_children` links children to that union
 
 ## How tree fetching works
 
@@ -115,11 +116,11 @@ The graph payload currently looks like this:
       "isRoot": true
     }
   ],
-  "familyUnits": [
+  "unions": [
     {
-      "id": "family-unit-uuid",
-      "parentPersonIds": ["parent-a", "parent-b"],
-      "childPersonIds": ["child-a", "child-b"]
+      "id": "union-uuid",
+      "parentIds": ["parent-a", "parent-b"],
+      "childIds": ["child-a", "child-b"]
     }
   ]
 }
@@ -132,14 +133,11 @@ That single graph response is enough for the canvas to render the tree.
 The workspace renderer does three things:
 
 1. It centers the camera on `rootPersonId` when the graph loads.
-2. It renders every person as a draggable card at its stored `x` and `y`.
-3. It renders each family unit as:
-   - vertical connectors from parents down to a shared partner line
-   - one shared trunk from that line
-   - a sibling bar for the unit's children
-   - vertical drops from the sibling bar to each child node
+2. It derives union-node positions from the connected people.
+3. It hands the whole DAG to React Flow as custom nodes and smooth edges.
+4. It lets React Flow handle pan, zoom, and edge rendering while we persist only person coordinates.
 
-That gives us the "parents linked together, children linked to the union" layout you asked for.
+That keeps the backend domain normalized and the frontend rendering logic much cleaner.
 
 ## Current API surface
 
@@ -202,7 +200,7 @@ powershell -ExecutionPolicy Bypass -File scripts/init-db.ps1
 
 1. Add explicit person editing flows.
 2. Add profile photo upload and media persistence.
-3. Harden relationship and family-unit editing rules.
+3. Harden relationship and union editing rules.
 4. Add tests for auth, graph fetch, relative creation, and position persistence.
 
 ## Planning docs

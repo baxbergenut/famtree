@@ -46,11 +46,15 @@ input {
   font: inherit;
 }
 
-.canvas-surface {
+.workspace-flow {
   background:
-    linear-gradient(rgba(145, 124, 103, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(145, 124, 103, 0.07) 1px, transparent 1px),
-    radial-gradient(circle at center, rgba(255, 255, 255, 0.9), rgba(244, 235, 224, 0.85));
-  background-size: 48px 48px, 48px 48px, 100% 100%;
-  background-position: -1px -1px, -1px -1px, center;
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.92), rgba(244, 235, 224, 0.88));
+}
+
+.react-flow__pane {
+  cursor: grab;
+}
+
+.react-flow__pane.dragging {
+  cursor: grabbing;
 }

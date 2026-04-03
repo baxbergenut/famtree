@@ -72,16 +72,16 @@ Do not blur responsibilities between frontend and backend.
 
 - Keep handlers thin and move business rules into service/domain layers.
 - Enforce ownership and tree boundaries on every authenticated request.
-- Keep family-unit validation centralized.
+- Keep union validation centralized.
 - Prefer explicit SQL or type-safe query tooling over heavy ORM magic.
 
 ## Data modeling guardrails
 
-- `User`, `Tree`, `Person`, `FamilyUnit`, `FamilyUnitParent`, `FamilyUnitChild`, `MediaAsset`, and `Session` are the baseline entities.
+- `User`, `Tree`, `Person`, `Union`, `UnionParent`, `UnionChild`, `MediaAsset`, and `Session` are the baseline entities.
 - The root person should be explicitly linked from the tree record.
-- Shared parental units are the canonical family structure in MVP.
-- A family unit may have one or two parents.
-- A child belongs to one family unit in the current MVP model.
+- Union nodes are the canonical family structure in MVP.
+- A union may have one or two parents.
+- A child belongs to one union in the current MVP model.
 - Persist node coordinates for layout state.
 - Do not hard-code labels like `dad` or `cousin` as relationship semantics in MVP; keep them in the optional note field unless the domain model is intentionally expanded.
 
@@ -90,7 +90,7 @@ Do not blur responsibilities between frontend and backend.
 1. Repo scaffold
 2. Auth and sessions
 3. Root-person bootstrap on registration
-4. Graph and family-unit APIs
+4. Graph and union APIs
 5. Canvas workspace
 6. Image uploads
 7. Testing and deployment hardening
@@ -112,7 +112,7 @@ When making design choices, prefer distinctive simplicity over feature-heavy chr
 - Auth should support register, login, logout, and current-session lookup.
 - Tree APIs should expose the current user's graph in one efficient fetch for canvas hydration.
 - Person creation should support context-aware creation from an existing node.
-- Family-unit creation and updates must validate tree ownership, prevent invalid self-links, cap parents at two, and avoid duplicate membership.
+- Union creation and updates must validate tree ownership, prevent invalid self-links, cap parents at two, and avoid duplicate membership.
 - Image APIs should validate file type and file size before associating media to a person.
 
 ## Quality bar

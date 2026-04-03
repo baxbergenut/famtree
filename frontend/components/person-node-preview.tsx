@@ -4,6 +4,8 @@ type PersonNodePreviewProps = {
   note?: string;
   highlighted?: boolean;
   compact?: boolean;
+  isDragging?: boolean;
+  onPointerDown?: (event: React.PointerEvent<HTMLElement>) => void;
   onAddParent?: () => void;
   onAddChild?: () => void;
 };
@@ -14,14 +16,19 @@ export function PersonNodePreview({
   note,
   highlighted = false,
   compact = false,
+  isDragging = false,
+  onPointerDown,
   onAddParent,
   onAddChild,
 }: PersonNodePreviewProps) {
   return (
     <article
+      onPointerDown={onPointerDown}
+      data-node-card="true"
       className={[
         compact ? "w-60" : "w-64",
-        "rounded-[28px] border bg-white/88 p-5 shadow-[0_24px_80px_rgba(34,27,22,0.12)] backdrop-blur",
+        "select-none rounded-[28px] border bg-white/88 p-5 shadow-[0_24px_80px_rgba(34,27,22,0.12)] backdrop-blur transition-shadow",
+        isDragging ? "cursor-grabbing shadow-[0_30px_110px_rgba(34,27,22,0.2)]" : "cursor-grab",
         highlighted
           ? "border-[var(--accent-strong)] ring-2 ring-[var(--accent-soft)]"
           : "border-[var(--line-soft)]",
@@ -31,7 +38,7 @@ export function PersonNodePreview({
         <div className="flex items-center gap-4">
           <div
             className={[
-              "flex h-14 w-14 items-center justify-center rounded-full border text-lg font-semibold",
+              "flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border text-lg font-semibold",
               highlighted
                 ? "border-[var(--accent-strong)] bg-[var(--accent-soft)] text-[var(--accent-strong)]"
                 : "border-[var(--line-strong)] bg-[var(--surface-muted)] text-[var(--ink-soft)]",
@@ -70,6 +77,7 @@ export function PersonNodePreview({
         <div className="mt-5 flex gap-2">
           <button
             type="button"
+            onPointerDown={(event) => event.stopPropagation()}
             onClick={onAddParent}
             className="rounded-full border border-[var(--line-soft)] px-3 py-2 text-xs font-medium text-[var(--ink-soft)] transition hover:border-[var(--accent-strong)] hover:bg-[var(--accent-soft)]"
           >
@@ -77,6 +85,7 @@ export function PersonNodePreview({
           </button>
           <button
             type="button"
+            onPointerDown={(event) => event.stopPropagation()}
             onClick={onAddChild}
             className="rounded-full border border-[var(--line-soft)] px-3 py-2 text-xs font-medium text-[var(--ink-soft)] transition hover:border-[var(--accent-strong)] hover:bg-[var(--accent-soft)]"
           >

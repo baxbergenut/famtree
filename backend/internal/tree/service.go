@@ -11,6 +11,7 @@ var (
 	ErrTreeNotFound       = errors.New("tree not found")
 	ErrPersonNotFound     = errors.New("person not found")
 	ErrInvalidRelation    = errors.New("invalid relation")
+	ErrInvalidPersonInput = errors.New("invalid person input")
 	ErrParentLimitReached = errors.New("child already has two parents")
 )
 
@@ -66,6 +67,12 @@ type CreateRelativeInput struct {
 	BirthDate      *string
 }
 
+type UpdatePositionInput struct {
+	PersonID string
+	X        float64
+	Y        float64
+}
+
 func NewService(db *sql.DB) *Service {
 	return &Service{db: db}
 }
@@ -112,7 +119,10 @@ func (s *Service) GetByOwnerUserID(ctx context.Context, ownerUserID string) (Tre
 }
 
 func (s *Service) GetGraphByOwnerUserID(ctx context.Context, ownerUserID string) (Graph, error) {
-	var graph Graph
+	graph := Graph{
+		Persons:       []Person{},
+		Relationships: []Relationship{},
+	}
 
 	err := s.db.QueryRowContext(ctx, `
 		SELECT id, root_person_id
@@ -212,7 +222,7 @@ func (s *Service) GetGraphByOwnerUserID(ctx context.Context, ownerUserID string)
 
 func (s *Service) CreateRelative(ctx context.Context, ownerUserID string, input CreateRelativeInput) (Graph, error) {
 	if input.AnchorPersonID == "" || input.FirstName == "" || input.LastName == "" {
-		return Graph{}, ErrPersonNotFound
+		return Graph{}, ErrInvalidPersonInput
 	}
 
 	if input.Relation != "parent" && input.Relation != "child" {
@@ -285,6 +295,35 @@ func (s *Service) CreateRelative(ctx context.Context, ownerUserID string, input 
 	}
 
 	return s.GetGraphByOwnerUserID(ctx, ownerUserID)
+}
+
+func (s *Service) UpdatePosition(ctx context.Context, ownerUserID string, input UpdatePositionInput) error {
+	if input.PersonID == "" {
+		return ErrPersonNotFound
+	}
+
+	result, err := s.db.ExecContext(ctx, `
+		UPDATE persons p
+		SET x = $1, y = $2, updated_at = NOW()
+		FROM trees t
+		WHERE p.id = $3
+		  AND p.tree_id = t.id
+		  AND t.owner_user_id = $4
+	`, input.X, input.Y, input.PersonID, ownerUserID)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return ErrPersonNotFound
+	}
+
+	return nil
 }
 
 func (s *Service) calculatePlacement(

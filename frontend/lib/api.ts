@@ -159,7 +159,13 @@ export async function getTreeGraph(): Promise<TreeGraph | null> {
   }
 
   const data = await parseResponse<{ graph: TreeGraph }>(response);
-  return data.graph;
+  return {
+    ...data.graph,
+    persons: Array.isArray(data.graph.persons) ? data.graph.persons : [],
+    relationships: Array.isArray(data.graph.relationships)
+      ? data.graph.relationships
+      : [],
+  };
 }
 
 export async function createRelative(
@@ -175,5 +181,30 @@ export async function createRelative(
   });
 
   const data = await parseResponse<{ graph: TreeGraph }>(response);
-  return data.graph;
+  return {
+    ...data.graph,
+    persons: Array.isArray(data.graph.persons) ? data.graph.persons : [],
+    relationships: Array.isArray(data.graph.relationships)
+      ? data.graph.relationships
+      : [],
+  };
+}
+
+export async function updatePersonPosition(
+  personId: string,
+  position: { x: number; y: number },
+): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/v1/persons/${personId}/position`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(position),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as ApiError;
+    throw new Error(payload.error || "Failed to update person position");
+  }
 }

@@ -8,6 +8,8 @@ import (
 	"famtree/backend/internal/auth"
 	"famtree/backend/internal/config"
 	"famtree/backend/internal/tree"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func healthHandler(cfg config.Config) http.HandlerFunc {
@@ -224,6 +226,8 @@ func createRelativeHandler(cfg config.Config, authService *auth.Service, treeSer
 			switch {
 			case errors.Is(err, tree.ErrInvalidRelation):
 				writeError(w, http.StatusBadRequest, "relation must be either parent or child")
+			case errors.Is(err, tree.ErrInvalidPersonInput):
+				writeError(w, http.StatusBadRequest, "first name and last name are required")
 			case errors.Is(err, tree.ErrParentLimitReached):
 				writeError(w, http.StatusBadRequest, "this person already has two parents")
 			case errors.Is(err, tree.ErrPersonNotFound):
@@ -237,6 +241,53 @@ func createRelativeHandler(cfg config.Config, authService *auth.Service, treeSer
 		writeJSON(w, http.StatusCreated, map[string]any{
 			"graph": graph,
 		})
+	}
+}
+
+func updatePersonPositionHandler(cfg config.Config, authService *auth.Service, treeService *tree.Service) http.HandlerFunc {
+	type request struct {
+		X float64 `json:"x"`
+		Y float64 `json:"y"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := authService.CurrentUser(r.Context(), readSessionToken(r, cfg))
+		if err != nil {
+			if errors.Is(err, auth.ErrUnauthorized) {
+				writeError(w, http.StatusUnauthorized, "not authenticated")
+				return
+			}
+			writeError(w, http.StatusInternalServerError, "failed to load session")
+			return
+		}
+
+		personID := chi.URLParam(r, "personID")
+		if personID == "" {
+			writeError(w, http.StatusBadRequest, "missing person id")
+			return
+		}
+
+		var payload request
+		if err := readJSON(r, &payload); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid request body")
+			return
+		}
+
+		if err := treeService.UpdatePosition(r.Context(), user.UserID, tree.UpdatePositionInput{
+			PersonID: personID,
+			X:        payload.X,
+			Y:        payload.Y,
+		}); err != nil {
+			switch {
+			case errors.Is(err, tree.ErrPersonNotFound):
+				writeError(w, http.StatusNotFound, "person not found")
+			default:
+				writeError(w, http.StatusInternalServerError, "failed to update person position")
+			}
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
 

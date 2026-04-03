@@ -4,7 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
+	"sort"
+	"strings"
 )
 
 var (
@@ -45,17 +46,17 @@ type Person struct {
 	IsRoot    bool    `json:"isRoot"`
 }
 
-type Relationship struct {
-	ID             string `json:"id"`
-	ParentPersonID string `json:"parentPersonId"`
-	ChildPersonID  string `json:"childPersonId"`
+type FamilyUnit struct {
+	ID              string   `json:"id"`
+	ParentPersonIDs []string `json:"parentPersonIds"`
+	ChildPersonIDs  []string `json:"childPersonIds"`
 }
 
 type Graph struct {
-	TreeID        string         `json:"treeId"`
-	RootPersonID  string         `json:"rootPersonId"`
-	Persons       []Person       `json:"persons"`
-	Relationships []Relationship `json:"relationships"`
+	TreeID       string       `json:"treeId"`
+	RootPersonID string       `json:"rootPersonId"`
+	Persons      []Person     `json:"persons"`
+	FamilyUnits  []FamilyUnit `json:"familyUnits"`
 }
 
 type CreateRelativeInput struct {
@@ -119,9 +120,13 @@ func (s *Service) GetByOwnerUserID(ctx context.Context, ownerUserID string) (Tre
 }
 
 func (s *Service) GetGraphByOwnerUserID(ctx context.Context, ownerUserID string) (Graph, error) {
+	if err := s.backfillLegacyRelationships(ctx, ownerUserID); err != nil {
+		return Graph{}, err
+	}
+
 	graph := Graph{
-		Persons:       []Person{},
-		Relationships: []Relationship{},
+		Persons:     []Person{},
+		FamilyUnits: []FamilyUnit{},
 	}
 
 	err := s.db.QueryRowContext(ctx, `
@@ -189,38 +194,105 @@ func (s *Service) GetGraphByOwnerUserID(ctx context.Context, ownerUserID string)
 		return Graph{}, err
 	}
 
-	relationshipRows, err := s.db.QueryContext(ctx, `
-		SELECT
-			r.id,
-			r.parent_person_id,
-			r.child_person_id
-		FROM parent_child_relationships r
-		JOIN trees t ON t.id = r.tree_id
+	familyUnitRows, err := s.db.QueryContext(ctx, `
+		SELECT fu.id
+		FROM family_units fu
+		JOIN trees t ON t.id = fu.tree_id
 		WHERE t.owner_user_id = $1
-		ORDER BY r.created_at ASC
+		ORDER BY fu.created_at ASC
 	`, ownerUserID)
 	if err != nil {
 		return Graph{}, err
 	}
-	defer relationshipRows.Close()
+	defer familyUnitRows.Close()
 
-	for relationshipRows.Next() {
-		var relationship Relationship
-		if err := relationshipRows.Scan(
-			&relationship.ID,
-			&relationship.ParentPersonID,
-			&relationship.ChildPersonID,
-		); err != nil {
+	familyUnitIndexByID := map[string]int{}
+	for familyUnitRows.Next() {
+		var familyUnit FamilyUnit
+		if err := familyUnitRows.Scan(&familyUnit.ID); err != nil {
 			return Graph{}, err
 		}
 
-		graph.Relationships = append(graph.Relationships, relationship)
+		familyUnit.ParentPersonIDs = []string{}
+		familyUnit.ChildPersonIDs = []string{}
+		familyUnitIndexByID[familyUnit.ID] = len(graph.FamilyUnits)
+		graph.FamilyUnits = append(graph.FamilyUnits, familyUnit)
 	}
 
-	return graph, relationshipRows.Err()
+	if err := familyUnitRows.Err(); err != nil {
+		return Graph{}, err
+	}
+
+	familyParentRows, err := s.db.QueryContext(ctx, `
+		SELECT fup.family_unit_id, fup.person_id
+		FROM family_unit_parents fup
+		JOIN family_units fu ON fu.id = fup.family_unit_id
+		JOIN trees t ON t.id = fu.tree_id
+		WHERE t.owner_user_id = $1
+		ORDER BY fup.created_at ASC
+	`, ownerUserID)
+	if err != nil {
+		return Graph{}, err
+	}
+	defer familyParentRows.Close()
+
+	for familyParentRows.Next() {
+		var familyUnitID string
+		var personID string
+		if err := familyParentRows.Scan(&familyUnitID, &personID); err != nil {
+			return Graph{}, err
+		}
+
+		if familyIndex, ok := familyUnitIndexByID[familyUnitID]; ok {
+			graph.FamilyUnits[familyIndex].ParentPersonIDs = append(
+				graph.FamilyUnits[familyIndex].ParentPersonIDs,
+				personID,
+			)
+		}
+	}
+
+	if err := familyParentRows.Err(); err != nil {
+		return Graph{}, err
+	}
+
+	familyChildRows, err := s.db.QueryContext(ctx, `
+		SELECT fuc.family_unit_id, fuc.person_id
+		FROM family_unit_children fuc
+		JOIN family_units fu ON fu.id = fuc.family_unit_id
+		JOIN trees t ON t.id = fu.tree_id
+		WHERE t.owner_user_id = $1
+		ORDER BY fuc.created_at ASC
+	`, ownerUserID)
+	if err != nil {
+		return Graph{}, err
+	}
+	defer familyChildRows.Close()
+
+	for familyChildRows.Next() {
+		var familyUnitID string
+		var personID string
+		if err := familyChildRows.Scan(&familyUnitID, &personID); err != nil {
+			return Graph{}, err
+		}
+
+		if familyIndex, ok := familyUnitIndexByID[familyUnitID]; ok {
+			graph.FamilyUnits[familyIndex].ChildPersonIDs = append(
+				graph.FamilyUnits[familyIndex].ChildPersonIDs,
+				personID,
+			)
+		}
+	}
+
+	if err := familyChildRows.Err(); err != nil {
+		return Graph{}, err
+	}
+
+	return graph, nil
 }
 
 func (s *Service) CreateRelative(ctx context.Context, ownerUserID string, input CreateRelativeInput) (Graph, error) {
+	input.FirstName = strings.TrimSpace(input.FirstName)
+	input.LastName = strings.TrimSpace(input.LastName)
 	if input.AnchorPersonID == "" || input.FirstName == "" {
 		return Graph{}, ErrInvalidPersonInput
 	}
@@ -252,42 +324,102 @@ func (s *Service) CreateRelative(ctx context.Context, ownerUserID string, input 
 		return Graph{}, err
 	}
 
-	offsetX, offsetY, err := s.calculatePlacement(ctx, tx, input.Relation, input.AnchorPersonID, anchorX, anchorY)
-	if err != nil {
-		return Graph{}, err
-	}
+	switch input.Relation {
+	case "parent":
+		familyUnit, hasFamilyUnit, err := s.loadChildFamilyUnit(ctx, tx, ownerUserID, input.AnchorPersonID)
+		if err != nil {
+			return Graph{}, err
+		}
 
-	var personID string
-	err = tx.QueryRowContext(ctx, `
-		INSERT INTO persons (
-			tree_id,
-			first_name,
-			last_name,
-			note,
-			birth_date,
-			x,
-			y,
-			created_by_user_id
+		if hasFamilyUnit && len(familyUnit.ParentPersonIDs) >= 2 {
+			return Graph{}, ErrParentLimitReached
+		}
+
+		offsetX, offsetY, err := s.calculateParentPlacement(
+			ctx,
+			tx,
+			anchorX,
+			anchorY,
+			familyUnit,
+			hasFamilyUnit,
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		RETURNING id
-	`, treeID, input.FirstName, input.LastName, nullableString(input.Note), nullableString(input.BirthDate), offsetX, offsetY, ownerUserID).Scan(&personID)
-	if err != nil {
-		return Graph{}, err
-	}
+		if err != nil {
+			return Graph{}, err
+		}
 
-	parentID := personID
-	childID := input.AnchorPersonID
-	if input.Relation == "child" {
-		parentID = input.AnchorPersonID
-		childID = personID
-	}
+		personID, err := s.insertPerson(
+			ctx,
+			tx,
+			treeID,
+			ownerUserID,
+			input.FirstName,
+			input.LastName,
+			input.Note,
+			input.BirthDate,
+			offsetX,
+			offsetY,
+		)
+		if err != nil {
+			return Graph{}, err
+		}
 
-	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO parent_child_relationships (tree_id, parent_person_id, child_person_id)
-		VALUES ($1, $2, $3)
-	`, treeID, parentID, childID); err != nil {
-		return Graph{}, err
+		if !hasFamilyUnit {
+			familyUnit.ID, err = s.createFamilyUnit(ctx, tx, treeID, ownerUserID)
+			if err != nil {
+				return Graph{}, err
+			}
+
+			if err := s.attachChildToFamilyUnit(ctx, tx, familyUnit.ID, input.AnchorPersonID); err != nil {
+				return Graph{}, err
+			}
+		}
+
+		if err := s.attachParentToFamilyUnit(ctx, tx, familyUnit.ID, personID); err != nil {
+			return Graph{}, err
+		}
+	case "child":
+		familyUnit, hasFamilyUnit, err := s.loadParentFamilyUnit(ctx, tx, ownerUserID, input.AnchorPersonID)
+		if err != nil {
+			return Graph{}, err
+		}
+
+		if !hasFamilyUnit {
+			familyUnit.ID, err = s.createFamilyUnit(ctx, tx, treeID, ownerUserID)
+			if err != nil {
+				return Graph{}, err
+			}
+
+			if err := s.attachParentToFamilyUnit(ctx, tx, familyUnit.ID, input.AnchorPersonID); err != nil {
+				return Graph{}, err
+			}
+		}
+
+		offsetX, offsetY, err := s.calculateChildPlacement(ctx, tx, familyUnit.ID, anchorX, anchorY)
+		if err != nil {
+			return Graph{}, err
+		}
+
+		personID, err := s.insertPerson(
+			ctx,
+			tx,
+			treeID,
+			ownerUserID,
+			input.FirstName,
+			input.LastName,
+			input.Note,
+			input.BirthDate,
+			offsetX,
+			offsetY,
+		)
+		if err != nil {
+			return Graph{}, err
+		}
+
+		if err := s.attachChildToFamilyUnit(ctx, tx, familyUnit.ID, personID); err != nil {
+			return Graph{}, err
+		}
+	default:
+		return Graph{}, ErrInvalidRelation
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -326,49 +458,96 @@ func (s *Service) UpdatePosition(ctx context.Context, ownerUserID string, input 
 	return nil
 }
 
-func (s *Service) calculatePlacement(
+func (s *Service) calculateParentPlacement(
 	ctx context.Context,
 	tx *sql.Tx,
-	relation string,
-	anchorPersonID string,
+	anchorX float64,
+	anchorY float64,
+	familyUnit FamilyUnit,
+	hasFamilyUnit bool,
+) (float64, float64, error) {
+	if !hasFamilyUnit || len(familyUnit.ParentPersonIDs) == 0 {
+		return anchorX, anchorY - 240, nil
+	}
+
+	if len(familyUnit.ParentPersonIDs) >= 2 {
+		return 0, 0, ErrParentLimitReached
+	}
+
+	var existingParentX float64
+	err := tx.QueryRowContext(ctx, `
+		SELECT x
+		FROM persons
+		WHERE id = $1
+	`, familyUnit.ParentPersonIDs[0]).Scan(&existingParentX)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	candidateX := anchorX + (anchorX - existingParentX)
+	if candidateX == existingParentX {
+		candidateX = existingParentX + 220
+	}
+
+	return candidateX, anchorY - 240, nil
+}
+
+func (s *Service) calculateChildPlacement(
+	ctx context.Context,
+	tx *sql.Tx,
+	familyUnitID string,
 	anchorX float64,
 	anchorY float64,
 ) (float64, float64, error) {
-	switch relation {
-	case "parent":
-		var parentCount int
-		if err := tx.QueryRowContext(ctx, `
-			SELECT COUNT(*)
-			FROM parent_child_relationships
-			WHERE child_person_id = $1
-		`, anchorPersonID).Scan(&parentCount); err != nil {
-			return 0, 0, err
-		}
-
-		if parentCount >= 2 {
-			return 0, 0, ErrParentLimitReached
-		}
-
-		xOffset := -220.0
-		if parentCount == 1 {
-			xOffset = 220.0
-		}
-
-		return anchorX + xOffset, anchorY - 240, nil
-	case "child":
-		var childCount int
-		if err := tx.QueryRowContext(ctx, `
-			SELECT COUNT(*)
-			FROM parent_child_relationships
-			WHERE parent_person_id = $1
-		`, anchorPersonID).Scan(&childCount); err != nil {
-			return 0, 0, err
-		}
-
-		return anchorX + alternatingOffset(childCount), anchorY + 240, nil
-	default:
-		return 0, 0, fmt.Errorf("%w: %s", ErrInvalidRelation, relation)
+	parentRows, err := tx.QueryContext(ctx, `
+		SELECT p.x, p.y
+		FROM family_unit_parents fup
+		JOIN persons p ON p.id = fup.person_id
+		WHERE fup.family_unit_id = $1
+		ORDER BY fup.created_at ASC
+	`, familyUnitID)
+	if err != nil {
+		return 0, 0, err
 	}
+	defer parentRows.Close()
+
+	parentCount := 0
+	centerX := 0.0
+	maxParentY := anchorY
+	for parentRows.Next() {
+		var parentX float64
+		var parentY float64
+		if err := parentRows.Scan(&parentX, &parentY); err != nil {
+			return 0, 0, err
+		}
+
+		centerX += parentX
+		if parentCount == 0 || parentY > maxParentY {
+			maxParentY = parentY
+		}
+		parentCount++
+	}
+
+	if err := parentRows.Err(); err != nil {
+		return 0, 0, err
+	}
+
+	if parentCount == 0 {
+		centerX = anchorX
+	} else {
+		centerX = centerX / float64(parentCount)
+	}
+
+	var childCount int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM family_unit_children
+		WHERE family_unit_id = $1
+	`, familyUnitID).Scan(&childCount); err != nil {
+		return 0, 0, err
+	}
+
+	return centerX + alternatingOffset(childCount), maxParentY + 240, nil
 }
 
 func alternatingOffset(index int) float64 {
@@ -390,4 +569,356 @@ func nullableString(value *string) any {
 	}
 
 	return *value
+}
+
+func (s *Service) insertPerson(
+	ctx context.Context,
+	tx *sql.Tx,
+	treeID string,
+	ownerUserID string,
+	firstName string,
+	lastName string,
+	note *string,
+	birthDate *string,
+	x float64,
+	y float64,
+) (string, error) {
+	var personID string
+	err := tx.QueryRowContext(ctx, `
+		INSERT INTO persons (
+			tree_id,
+			first_name,
+			last_name,
+			note,
+			birth_date,
+			x,
+			y,
+			created_by_user_id
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id
+	`, treeID, firstName, lastName, nullableString(note), nullableString(birthDate), x, y, ownerUserID).Scan(&personID)
+	if err != nil {
+		return "", err
+	}
+
+	return personID, nil
+}
+
+func (s *Service) createFamilyUnit(ctx context.Context, tx *sql.Tx, treeID string, ownerUserID string) (string, error) {
+	var familyUnitID string
+	err := tx.QueryRowContext(ctx, `
+		INSERT INTO family_units (tree_id, created_by_user_id)
+		VALUES ($1, $2)
+		RETURNING id
+	`, treeID, ownerUserID).Scan(&familyUnitID)
+	if err != nil {
+		return "", err
+	}
+
+	return familyUnitID, nil
+}
+
+func (s *Service) attachParentToFamilyUnit(ctx context.Context, tx *sql.Tx, familyUnitID string, personID string) error {
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO family_unit_parents (family_unit_id, person_id)
+		VALUES ($1, $2)
+	`, familyUnitID, personID); err != nil {
+		return err
+	}
+
+	return s.touchFamilyUnit(ctx, tx, familyUnitID)
+}
+
+func (s *Service) attachChildToFamilyUnit(ctx context.Context, tx *sql.Tx, familyUnitID string, personID string) error {
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO family_unit_children (family_unit_id, person_id)
+		VALUES ($1, $2)
+	`, familyUnitID, personID); err != nil {
+		return err
+	}
+
+	return s.touchFamilyUnit(ctx, tx, familyUnitID)
+}
+
+func (s *Service) touchFamilyUnit(ctx context.Context, tx *sql.Tx, familyUnitID string) error {
+	_, err := tx.ExecContext(ctx, `
+		UPDATE family_units
+		SET updated_at = NOW()
+		WHERE id = $1
+	`, familyUnitID)
+
+	return err
+}
+
+func (s *Service) loadChildFamilyUnit(
+	ctx context.Context,
+	tx *sql.Tx,
+	ownerUserID string,
+	childPersonID string,
+) (FamilyUnit, bool, error) {
+	var familyUnitID string
+	err := tx.QueryRowContext(ctx, `
+		SELECT fuc.family_unit_id
+		FROM family_unit_children fuc
+		JOIN family_units fu ON fu.id = fuc.family_unit_id
+		JOIN trees t ON t.id = fu.tree_id
+		WHERE fuc.person_id = $1
+		  AND t.owner_user_id = $2
+		LIMIT 1
+	`, childPersonID, ownerUserID).Scan(&familyUnitID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return FamilyUnit{}, false, nil
+		}
+		return FamilyUnit{}, false, err
+	}
+
+	familyUnit, err := s.loadFamilyUnit(ctx, tx, familyUnitID)
+	if err != nil {
+		return FamilyUnit{}, false, err
+	}
+
+	return familyUnit, true, nil
+}
+
+func (s *Service) loadParentFamilyUnit(
+	ctx context.Context,
+	tx *sql.Tx,
+	ownerUserID string,
+	parentPersonID string,
+) (FamilyUnit, bool, error) {
+	var familyUnitID string
+	err := tx.QueryRowContext(ctx, `
+		SELECT fup.family_unit_id
+		FROM family_unit_parents fup
+		JOIN family_units fu ON fu.id = fup.family_unit_id
+		JOIN trees t ON t.id = fu.tree_id
+		WHERE fup.person_id = $1
+		  AND t.owner_user_id = $2
+		ORDER BY fu.updated_at DESC, fu.created_at DESC
+		LIMIT 1
+	`, parentPersonID, ownerUserID).Scan(&familyUnitID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return FamilyUnit{}, false, nil
+		}
+		return FamilyUnit{}, false, err
+	}
+
+	familyUnit, err := s.loadFamilyUnit(ctx, tx, familyUnitID)
+	if err != nil {
+		return FamilyUnit{}, false, err
+	}
+
+	return familyUnit, true, nil
+}
+
+func (s *Service) loadFamilyUnit(ctx context.Context, tx *sql.Tx, familyUnitID string) (FamilyUnit, error) {
+	familyUnit := FamilyUnit{
+		ID:              familyUnitID,
+		ParentPersonIDs: []string{},
+		ChildPersonIDs:  []string{},
+	}
+
+	parentRows, err := tx.QueryContext(ctx, `
+		SELECT person_id
+		FROM family_unit_parents
+		WHERE family_unit_id = $1
+		ORDER BY created_at ASC
+	`, familyUnitID)
+	if err != nil {
+		return FamilyUnit{}, err
+	}
+	defer parentRows.Close()
+
+	for parentRows.Next() {
+		var personID string
+		if err := parentRows.Scan(&personID); err != nil {
+			return FamilyUnit{}, err
+		}
+
+		familyUnit.ParentPersonIDs = append(familyUnit.ParentPersonIDs, personID)
+	}
+
+	if err := parentRows.Err(); err != nil {
+		return FamilyUnit{}, err
+	}
+
+	childRows, err := tx.QueryContext(ctx, `
+		SELECT person_id
+		FROM family_unit_children
+		WHERE family_unit_id = $1
+		ORDER BY created_at ASC
+	`, familyUnitID)
+	if err != nil {
+		return FamilyUnit{}, err
+	}
+	defer childRows.Close()
+
+	for childRows.Next() {
+		var personID string
+		if err := childRows.Scan(&personID); err != nil {
+			return FamilyUnit{}, err
+		}
+
+		familyUnit.ChildPersonIDs = append(familyUnit.ChildPersonIDs, personID)
+	}
+
+	if err := childRows.Err(); err != nil {
+		return FamilyUnit{}, err
+	}
+
+	return familyUnit, nil
+}
+
+type legacyRelationshipRow struct {
+	TreeID         string
+	ParentPersonID string
+	ChildPersonID  string
+}
+
+type legacyChildGroup struct {
+	TreeID    string
+	ParentIDs []string
+	ChildIDs  []string
+}
+
+func (s *Service) backfillLegacyRelationships(ctx context.Context, ownerUserID string) error {
+	var legacyTableName sql.NullString
+	if err := s.db.QueryRowContext(ctx, `
+		SELECT to_regclass('public.parent_child_relationships')::text
+	`).Scan(&legacyTableName); err != nil {
+		return err
+	}
+
+	if !legacyTableName.Valid {
+		return nil
+	}
+
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT
+			r.tree_id,
+			r.parent_person_id,
+			r.child_person_id
+		FROM parent_child_relationships r
+		JOIN trees t ON t.id = r.tree_id
+		WHERE t.owner_user_id = $1
+		ORDER BY r.created_at ASC
+	`, ownerUserID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	legacyRows := []legacyRelationshipRow{}
+	for rows.Next() {
+		var row legacyRelationshipRow
+		if err := rows.Scan(&row.TreeID, &row.ParentPersonID, &row.ChildPersonID); err != nil {
+			return err
+		}
+
+		legacyRows = append(legacyRows, row)
+	}
+
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	if len(legacyRows) == 0 {
+		return nil
+	}
+
+	migratedChildRows, err := s.db.QueryContext(ctx, `
+		SELECT fuc.person_id
+		FROM family_unit_children fuc
+		JOIN family_units fu ON fu.id = fuc.family_unit_id
+		JOIN trees t ON t.id = fu.tree_id
+		WHERE t.owner_user_id = $1
+	`, ownerUserID)
+	if err != nil {
+		return err
+	}
+	defer migratedChildRows.Close()
+
+	migratedChildren := map[string]struct{}{}
+	for migratedChildRows.Next() {
+		var personID string
+		if err := migratedChildRows.Scan(&personID); err != nil {
+			return err
+		}
+
+		migratedChildren[personID] = struct{}{}
+	}
+
+	if err := migratedChildRows.Err(); err != nil {
+		return err
+	}
+
+	childParents := map[string]map[string]struct{}{}
+	childTree := map[string]string{}
+	for _, row := range legacyRows {
+		if _, alreadyMigrated := migratedChildren[row.ChildPersonID]; alreadyMigrated {
+			continue
+		}
+
+		if _, ok := childParents[row.ChildPersonID]; !ok {
+			childParents[row.ChildPersonID] = map[string]struct{}{}
+			childTree[row.ChildPersonID] = row.TreeID
+		}
+
+		childParents[row.ChildPersonID][row.ParentPersonID] = struct{}{}
+	}
+
+	if len(childParents) == 0 {
+		return nil
+	}
+
+	groupByKey := map[string]*legacyChildGroup{}
+	for childID, parentSet := range childParents {
+		parentIDs := make([]string, 0, len(parentSet))
+		for parentID := range parentSet {
+			parentIDs = append(parentIDs, parentID)
+		}
+		sort.Strings(parentIDs)
+
+		key := childTree[childID] + "|" + strings.Join(parentIDs, ",")
+		if _, ok := groupByKey[key]; !ok {
+			groupByKey[key] = &legacyChildGroup{
+				TreeID:    childTree[childID],
+				ParentIDs: append([]string(nil), parentIDs...),
+				ChildIDs:  []string{},
+			}
+		}
+
+		groupByKey[key].ChildIDs = append(groupByKey[key].ChildIDs, childID)
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for _, group := range groupByKey {
+		familyUnitID, err := s.createFamilyUnit(ctx, tx, group.TreeID, ownerUserID)
+		if err != nil {
+			return err
+		}
+
+		for _, parentID := range group.ParentIDs {
+			if err := s.attachParentToFamilyUnit(ctx, tx, familyUnitID, parentID); err != nil {
+				return err
+			}
+		}
+
+		sort.Strings(group.ChildIDs)
+		for _, childID := range group.ChildIDs {
+			if err := s.attachChildToFamilyUnit(ctx, tx, familyUnitID, childID); err != nil {
+				return err
+			}
+		}
+	}
+
+	return tx.Commit()
 }

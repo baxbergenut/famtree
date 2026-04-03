@@ -60,14 +60,27 @@ BEGIN
   END IF;
 END $$;
 
-CREATE TABLE IF NOT EXISTS parent_child_relationships (
+CREATE TABLE IF NOT EXISTS family_units (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tree_id UUID NOT NULL REFERENCES trees(id) ON DELETE CASCADE,
-  parent_person_id UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
-  child_person_id UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
+  created_by_user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT parent_child_unique UNIQUE (parent_person_id, child_person_id),
-  CONSTRAINT parent_child_not_self CHECK (parent_person_id <> child_person_id)
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS family_unit_parents (
+  family_unit_id UUID NOT NULL REFERENCES family_units(id) ON DELETE CASCADE,
+  person_id UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (family_unit_id, person_id)
+);
+
+CREATE TABLE IF NOT EXISTS family_unit_children (
+  family_unit_id UUID NOT NULL REFERENCES family_units(id) ON DELETE CASCADE,
+  person_id UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (family_unit_id, person_id),
+  CONSTRAINT family_unit_child_unique_person UNIQUE (person_id)
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
@@ -81,8 +94,9 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_persons_tree_id ON persons(tree_id);
-CREATE INDEX IF NOT EXISTS idx_parent_child_tree_parent ON parent_child_relationships(tree_id, parent_person_id);
-CREATE INDEX IF NOT EXISTS idx_parent_child_tree_child ON parent_child_relationships(tree_id, child_person_id);
+CREATE INDEX IF NOT EXISTS idx_family_units_tree_id ON family_units(tree_id);
+CREATE INDEX IF NOT EXISTS idx_family_unit_parents_person_id ON family_unit_parents(person_id);
+CREATE INDEX IF NOT EXISTS idx_family_unit_children_person_id ON family_unit_children(person_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
 

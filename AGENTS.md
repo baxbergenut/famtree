@@ -14,13 +14,24 @@ The project should stay MVP-focused, visually refined, and realistic for a small
 
 ## Current stage
 
-The repository is in early setup.
+The initial scaffold already exists.
 
-Until the initial scaffold exists:
+Current implemented slices:
 
-- treat the architecture in `README.md` as the source of truth
-- prefer adding structure intentionally instead of generating broad boilerplate
-- keep documentation aligned with implementation decisions
+- monorepo layout with `frontend/`, `backend/`, `docs/`, `infra/`, and `scripts/`
+- email/password auth with cookie-based sessions
+- automatic tree and root-person bootstrap on registration
+- `GET /v1/tree/graph` canvas hydration
+- interactive workspace shell with pan, zoom, drag, add parent, and add child
+- persisted node coordinates in PostgreSQL
+
+Still in progress:
+
+- person editing beyond creation
+- media upload and profile photo persistence
+- migrations, tests, and deployment hardening
+
+Treat the implementation plus `README.md` as the source of truth, and keep docs aligned whenever architecture changes.
 
 ## Non-negotiable product rules
 
@@ -52,7 +63,7 @@ Do not blur responsibilities between frontend and backend.
 ### Frontend rules
 
 - Use Next.js App Router unless a concrete constraint forces otherwise.
-- Prefer server state management with a query library and local interaction state with a small client store.
+- Prefer server state fetched from the backend over fragile client-owned graph state.
 - Keep the canvas interaction model explicit: pan, zoom, drag, select, add parent, add child, edit person.
 - Favor composable UI primitives over large generated component kits.
 - The app should not look like a generic admin panel.
@@ -61,23 +72,25 @@ Do not blur responsibilities between frontend and backend.
 
 - Keep handlers thin and move business rules into service/domain layers.
 - Enforce ownership and tree boundaries on every authenticated request.
-- Keep relationship validation centralized.
+- Keep family-unit validation centralized.
 - Prefer explicit SQL or type-safe query tooling over heavy ORM magic.
 
 ## Data modeling guardrails
 
-- `User`, `Tree`, `Person`, `ParentChildRelationship`, `MediaAsset`, and `Session` are the baseline entities.
+- `User`, `Tree`, `Person`, `FamilyUnit`, `FamilyUnitParent`, `FamilyUnitChild`, `MediaAsset`, and `Session` are the baseline entities.
 - The root person should be explicitly linked from the tree record.
-- Parent-child links are the only required relationship type in MVP.
+- Shared parental units are the canonical family structure in MVP.
+- A family unit may have one or two parents.
+- A child belongs to one family unit in the current MVP model.
 - Persist node coordinates for layout state.
-- Do not hard-code derived labels like `dad` or `cousin` as relationship semantics in MVP; store them as optional notes unless the product model is expanded intentionally.
+- Do not hard-code labels like `dad` or `cousin` as relationship semantics in MVP; keep them in the optional note field unless the domain model is intentionally expanded.
 
 ## Preferred implementation order
 
 1. Repo scaffold
 2. Auth and sessions
 3. Root-person bootstrap on registration
-4. Person and relationship APIs
+4. Graph and family-unit APIs
 5. Canvas workspace
 6. Image uploads
 7. Testing and deployment hardening
@@ -99,7 +112,7 @@ When making design choices, prefer distinctive simplicity over feature-heavy chr
 - Auth should support register, login, logout, and current-session lookup.
 - Tree APIs should expose the current user's graph in one efficient fetch for canvas hydration.
 - Person creation should support context-aware creation from an existing node.
-- Relationship creation must validate tree ownership, prevent invalid self-links, and avoid duplicate edges.
+- Family-unit creation and updates must validate tree ownership, prevent invalid self-links, cap parents at two, and avoid duplicate membership.
 - Image APIs should validate file type and file size before associating media to a person.
 
 ## Quality bar
@@ -107,7 +120,7 @@ When making design choices, prefer distinctive simplicity over feature-heavy chr
 Before considering work complete, verify:
 
 - the change respects the root-node product rule
-- the change does not couple frontend and backend incorrectly
+- the change keeps frontend and backend responsibilities cleanly separated
 - auth and authorization are enforced where relevant
 - empty, loading, and error states are handled
 - tests cover the critical path or the gap is documented clearly
@@ -116,7 +129,7 @@ Before considering work complete, verify:
 
 - Do not introduce enterprise-scale infrastructure for MVP.
 - Do not add multiple auth strategies.
-- Do not over-model family relationships before MVP needs them.
+- Do not over-model extended family semantics before MVP needs them.
 - Do not depend on fragile client-only state for persisted graph data.
 - Do not let visual design collapse into a default dashboard look.
 

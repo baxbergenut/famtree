@@ -19,6 +19,9 @@ const HEADER_HEIGHT = 84;
 const SIDEBAR_WIDTH = 380;
 const BUTTON_OFFSET = 24;
 const NODE_HALF_HEIGHT = 78;
+const PARTNER_CURVE_DEPTH = 56;
+const SINGLE_PARENT_STUB = 48;
+const CHILD_CURVE_OFFSET = 72;
 const MIN_ZOOM = 0.55;
 const MAX_ZOOM = 1.9;
 const ZOOM_STEP = 0.0012;
@@ -127,13 +130,21 @@ export function WorkspaceCanvas() {
     () => (Array.isArray(graph?.persons) ? graph.persons : []),
     [graph],
   );
-  const relationships = useMemo(
-    () => (Array.isArray(graph?.relationships) ? graph.relationships : []),
+  const familyUnits = useMemo(
+    () => (Array.isArray(graph?.familyUnits) ? graph.familyUnits : []),
     [graph],
   );
   const personsById = useMemo(
     () => new Map(persons.map((person) => [person.id, person])),
     [persons],
+  );
+  const familyLinkCount = useMemo(
+    () =>
+      familyUnits.reduce(
+        (total, familyUnit) => total + familyUnit.childPersonIds.length,
+        0,
+      ),
+    [familyUnits],
   );
   const headerName = useMemo(
     () => formatName(user?.firstName, user?.lastName),
@@ -165,13 +176,15 @@ export function WorkspaceCanvas() {
     });
   }
 
+  const rootPersonId = graph?.rootPersonId;
+
   useEffect(() => {
-    if (!graph) {
+    if (!rootPersonId) {
       return;
     }
 
-    centerOnMe(graph, zoomRef.current);
-  }, [graph?.rootPersonId]);
+    centerOnMe(graphRef.current, zoomRef.current);
+  }, [rootPersonId]);
 
   useEffect(() => {
     function handleResize() {
@@ -406,7 +419,7 @@ export function WorkspaceCanvas() {
 
   if (loading) {
     return (
-      <section className="flex min-h-screen items-center justify-center bg-[var(--background)] text-sm text-[var(--ink-soft)]">
+      <section className="flex min-h-screen items-center justify-center bg-background text-sm text-(--ink-soft)">
         Loading your tree from PostgreSQL...
       </section>
     );
@@ -414,25 +427,25 @@ export function WorkspaceCanvas() {
 
   if (!user || !graph) {
     return (
-      <section className="flex min-h-screen items-center justify-center bg-[var(--background)] px-6">
-        <div className="w-full max-w-2xl rounded-[32px] border border-[var(--line-soft)] bg-white/80 p-8 shadow-[0_20px_80px_rgba(31,27,24,0.08)]">
-          <h2 className="text-2xl font-semibold text-[var(--ink-strong)]">
+      <section className="flex min-h-screen items-center justify-center bg-background px-6">
+        <div className="w-full max-w-2xl rounded-4xl border border-(--line-soft) bg-white/80 p-8 shadow-[0_20px_80px_rgba(31,27,24,0.08)]">
+          <h2 className="text-2xl font-semibold text-(--ink-strong)">
             Sign in to start building your tree
           </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--ink-soft)]">
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-(--ink-soft)">
             The workspace needs an active session before it can load your family
             graph.
           </p>
           <div className="mt-6 flex gap-3">
             <Link
               href="/register"
-              className="rounded-full bg-[var(--ink-strong)] px-5 py-3 text-sm font-semibold text-white"
+              className="rounded-full bg-(--ink-strong) px-5 py-3 text-sm font-semibold text-white"
             >
               Register
             </Link>
             <Link
               href="/login"
-              className="rounded-full border border-[var(--line-strong)] bg-[var(--surface-muted)] px-5 py-3 text-sm font-semibold text-[var(--ink-strong)]"
+              className="rounded-full border border-(--line-strong) bg-(--surface-muted) px-5 py-3 text-sm font-semibold text-(--ink-strong)"
             >
               Log in
             </Link>
@@ -446,7 +459,7 @@ export function WorkspaceCanvas() {
     interactionRef.current?.type === "pan" ? "cursor-grabbing" : "cursor-grab";
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-[var(--background)]">
+    <div className="fixed inset-0 overflow-hidden bg-background">
       <div
         ref={canvasRef}
         className={`absolute inset-0 select-none overflow-hidden ${cameraCursor}`}
@@ -467,26 +480,54 @@ export function WorkspaceCanvas() {
             transformOrigin: "0 0",
           }}
         >
-          {relationships.map((relationship) => {
-            const parent = personsById.get(relationship.parentPersonId);
-            const child = personsById.get(relationship.childPersonId);
-            if (!parent || !child) return null;
+          {familyUnits.map((familyUnit) => {
+            const parents = familyUnit.parentPersonIds
+              .map((personId) => personsById.get(personId))
+              .filter((person): person is PersonNode => Boolean(person))
+              .sort((left, right) => left.x - right.x);
+            const children = familyUnit.childPersonIds
+              .map((personId) => personsById.get(personId))
+              .filter((person): person is PersonNode => Boolean(person))
+              .sort((left, right) => left.x - right.x);
 
-            const parentX = parent.x;
-            const parentY = parent.y + NODE_HALF_HEIGHT;
-            const childX = child.x;
-            const childY = child.y - NODE_HALF_HEIGHT;
-            const midpointY = (parentY + childY) / 2;
+            if (parents.length === 0) {
+              return null;
+            }
+
+            const familyCurve = createFamilyCurve(parents);
 
             return (
-              <path
-                key={relationship.id}
-                d={`M ${parentX} ${parentY} C ${parentX} ${midpointY}, ${childX} ${midpointY}, ${childX} ${childY}`}
-                fill="none"
-                stroke="rgba(158, 111, 55, 0.45)"
-                strokeWidth={2.2 / zoom} // keep stroke visually consistent
-                strokeLinecap="round"
-              />
+              <g key={familyUnit.id}>
+                <path
+                  d={describeCubic(familyCurve)}
+                  stroke="rgba(158, 111, 55, 0.5)"
+                  strokeWidth={2.4 / zoom}
+                  strokeLinecap="round"
+                  fill="none"
+                />
+                {children.map((child, index) => {
+                  const attachmentPoint = pointOnCubic(
+                    familyCurve,
+                    childAttachmentT(child, index, children.length, familyCurve),
+                  );
+                  const childTopY = child.y - NODE_HALF_HEIGHT;
+                  const verticalLift = Math.min(
+                    CHILD_CURVE_OFFSET,
+                    Math.max(28, (childTopY - attachmentPoint.y) / 2),
+                  );
+
+                  return (
+                    <path
+                      key={`${familyUnit.id}-${child.id}-child`}
+                      d={`M ${attachmentPoint.x} ${attachmentPoint.y} C ${attachmentPoint.x} ${attachmentPoint.y + verticalLift}, ${child.x} ${childTopY - verticalLift}, ${child.x} ${childTopY}`}
+                      fill="none"
+                      stroke="rgba(158, 111, 55, 0.42)"
+                      strokeWidth={2.2 / zoom}
+                      strokeLinecap="round"
+                    />
+                  );
+                })}
+              </g>
             );
           })}
         </svg>
@@ -518,80 +559,87 @@ export function WorkspaceCanvas() {
         </div>
       </div>
 
-      <header className="fixed left-0 right-0 top-0 z-30 flex h-[84px] items-center justify-between px-6 lg:px-8">
-        <div className="flex items-center gap-3 rounded-full border border-[var(--line-soft)] bg-white/84 px-4 py-3 shadow-[0_16px_48px_rgba(32,27,23,0.12)] backdrop-blur">
+      <header className="fixed left-0 right-0 top-0 z-30 flex h-21 items-center justify-between px-6 lg:px-8">
+        <div className="flex items-center gap-3 rounded-full border border-(--line-soft) bg-white/84 px-4 py-3 shadow-[0_16px_48px_rgba(32,27,23,0.12)] backdrop-blur">
           <Link
             href="/"
-            className="flex items-center gap-3 text-sm font-semibold tracking-[0.28em] text-[var(--ink-strong)] uppercase"
+            className="flex items-center gap-3 text-sm font-semibold tracking-[0.28em] text-(--ink-strong) uppercase"
           >
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--line-strong)] bg-white text-base shadow-[0_8px_24px_rgba(36,31,28,0.08)]">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-(--line-strong) bg-white text-base shadow-[0_8px_24px_rgba(36,31,28,0.08)]">
               F
             </span>
             famtree
           </Link>
-          <span className="rounded-full bg-[var(--accent-soft)] px-3 py-2 text-xs font-semibold tracking-[0.2em] text-[var(--accent-strong)] uppercase">
+          <span className="rounded-full bg-(--accent-soft) px-3 py-2 text-xs font-semibold tracking-[0.2em] text-(--accent-strong) uppercase">
             Canvas
           </span>
         </div>
 
-        <div className="flex items-center gap-3 rounded-full border border-[var(--line-soft)] bg-white/84 px-4 py-3 shadow-[0_16px_48px_rgba(32,27,23,0.12)] backdrop-blur">
+        <div className="flex items-center gap-3 rounded-full border border-(--line-soft) bg-white/84 px-4 py-3 shadow-[0_16px_48px_rgba(32,27,23,0.12)] backdrop-blur">
           <div className="hidden text-right lg:block">
-            <p className="text-sm font-semibold text-[var(--ink-strong)]">
+            <p className="text-sm font-semibold text-(--ink-strong)">
               {headerName}
             </p>
-            <p className="text-xs text-[var(--ink-soft)]">{user.email}</p>
+            <p className="text-xs text-(--ink-soft)">{user.email}</p>
           </div>
           <button
             type="button"
             onClick={handleLogout}
             disabled={loggingOut}
-            className="rounded-full border border-[var(--line-strong)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold text-[var(--ink-strong)] transition hover:border-[var(--accent-strong)] hover:bg-[var(--accent-soft)] disabled:opacity-70"
+            className="rounded-full border border-(--line-strong) bg-(--surface-muted) px-4 py-2 text-sm font-semibold text-(--ink-strong) transition hover:border-(--accent-strong) hover:bg-(--accent-soft) disabled:opacity-70"
           >
             {loggingOut ? "Logging out..." : "Log out"}
           </button>
         </div>
       </header>
 
-      <aside className="fixed inset-y-0 right-0 z-30 w-[380px] border-l border-[var(--line-soft)] bg-white/86 backdrop-blur-xl">
-        <div className="h-full overflow-y-auto px-6 pb-6 pt-[108px]">
-          <p className="text-sm font-semibold tracking-[0.2em] text-[var(--accent-strong)] uppercase">
+      <aside className="fixed inset-y-0 right-0 z-30 w-95 border-l border-(--line-soft) bg-white/86 backdrop-blur-xl">
+        <div className="h-full overflow-y-auto px-6 pb-6 pt-27">
+          <p className="text-sm font-semibold tracking-[0.2em] text-(--accent-strong) uppercase">
             Add a relative
           </p>
-          <h2 className="mt-3 text-2xl font-semibold text-[var(--ink-strong)]">
+          <h2 className="mt-3 text-2xl font-semibold text-(--ink-strong)">
             {draft
               ? draft.relation === "parent"
                 ? "Create a parent"
                 : "Create a child"
               : "Choose a node"}
           </h2>
-          <p className="mt-3 text-sm leading-7 text-[var(--ink-soft)]">
+          <p className="mt-3 text-sm leading-7 text-(--ink-soft)">
             Drag the canvas with the mouse, zoom with the wheel, and drag nodes
-            to place people where they make sense to you.
+            to place people where they make sense to you. Children connect to a
+            shared family line instead of separate parent-to-child edges.
           </p>
 
-          <div className="mt-6 rounded-[24px] border border-[var(--line-soft)] bg-[var(--surface-muted)]/55 p-4 text-sm text-[var(--ink-soft)]">
+          <div className="mt-6 rounded-3xl border border-(--line-soft) bg-(--surface-muted)/55 p-4 text-sm text-(--ink-soft)">
             <p>
-              <span className="font-semibold text-[var(--ink-strong)]">
+              <span className="font-semibold text-(--ink-strong)">
                 {persons.length}
               </span>{" "}
               people
             </p>
             <p className="mt-1">
-              <span className="font-semibold text-[var(--ink-strong)]">
-                {relationships.length}
+              <span className="font-semibold text-(--ink-strong)">
+                {familyUnits.length}
               </span>{" "}
-              parent-child connections
+              family units
+            </p>
+            <p className="mt-1">
+              <span className="font-semibold text-(--ink-strong)">
+                {familyLinkCount}
+              </span>{" "}
+              child links
             </p>
             <p className="mt-3">
               Zoom:{" "}
-              <span className="font-semibold text-[var(--ink-strong)]">
+              <span className="font-semibold text-(--ink-strong)">
                 {Math.round(zoom * 100)}%
               </span>
             </p>
           </div>
 
           {error ? (
-            <section className="mt-5 rounded-[24px] border border-[#d8b5a5] bg-[#fff1ec] p-4 text-sm text-[#8f4226]">
+            <section className="mt-5 rounded-3xl border border-[#d8b5a5] bg-[#fff1ec] p-4 text-sm text-[#8f4226]">
               {error}
             </section>
           ) : null}
@@ -600,7 +648,7 @@ export function WorkspaceCanvas() {
             <form className="mt-6 space-y-4" onSubmit={handleCreateRelative}>
               <div className="grid gap-4">
                 <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-[var(--ink-strong)]">
+                  <span className="mb-2 block text-sm font-medium text-(--ink-strong)">
                     Name
                   </span>
                   <input
@@ -608,11 +656,11 @@ export function WorkspaceCanvas() {
                     value={draft.firstName}
                     onChange={updateDraft}
                     type="text"
-                    className="w-full rounded-2xl border border-[var(--line-soft)] bg-white px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
+                    className="w-full rounded-2xl border border-(--line-soft) bg-white px-4 py-3 text-sm text-(--ink-strong) outline-none transition focus:border-(--accent-strong)"
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-[var(--ink-strong)]">
+                  <span className="mb-2 block text-sm font-medium text-(--ink-strong)">
                     Last name
                   </span>
                   <input
@@ -621,11 +669,11 @@ export function WorkspaceCanvas() {
                     onChange={updateDraft}
                     type="text"
                     placeholder="Optional"
-                    className="w-full rounded-2xl border border-[var(--line-soft)] bg-white px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
+                    className="w-full rounded-2xl border border-(--line-soft) bg-white px-4 py-3 text-sm text-(--ink-strong) outline-none transition focus:border-(--accent-strong)"
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-[var(--ink-strong)]">
+                  <span className="mb-2 block text-sm font-medium text-(--ink-strong)">
                     Note
                   </span>
                   <input
@@ -638,11 +686,11 @@ export function WorkspaceCanvas() {
                         ? "mom, dad, guardian..."
                         : "son, daughter, child..."
                     }
-                    className="w-full rounded-2xl border border-[var(--line-soft)] bg-white px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
+                    className="w-full rounded-2xl border border-(--line-soft) bg-white px-4 py-3 text-sm text-(--ink-strong) outline-none transition focus:border-(--accent-strong)"
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-[var(--ink-strong)]">
+                  <span className="mb-2 block text-sm font-medium text-(--ink-strong)">
                     Birth date
                   </span>
                   <input
@@ -650,7 +698,7 @@ export function WorkspaceCanvas() {
                     value={draft.birthDate}
                     onChange={updateDraft}
                     type="date"
-                    className="w-full rounded-2xl border border-[var(--line-soft)] bg-white px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
+                    className="w-full rounded-2xl border border-(--line-soft) bg-white px-4 py-3 text-sm text-(--ink-strong) outline-none transition focus:border-(--accent-strong)"
                   />
                 </label>
               </div>
@@ -658,23 +706,24 @@ export function WorkspaceCanvas() {
                 <button
                   type="submit"
                   disabled={pending}
-                  className="rounded-full bg-[var(--ink-strong)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#2c2520] disabled:opacity-70"
+                  className="rounded-full bg-(--ink-strong) px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#2c2520] disabled:opacity-70"
                 >
                   {pending ? "Saving..." : "Save relative"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setDraft(null)}
-                  className="rounded-full border border-[var(--line-strong)] bg-[var(--surface-muted)] px-5 py-3 text-sm font-semibold text-[var(--ink-strong)] transition hover:border-[var(--accent-strong)] hover:bg-[var(--accent-soft)]"
+                  className="rounded-full border border-(--line-strong) bg-(--surface-muted) px-5 py-3 text-sm font-semibold text-(--ink-strong) transition hover:border-(--accent-strong) hover:bg-(--accent-soft)"
                 >
                   Cancel
                 </button>
               </div>
             </form>
           ) : (
-            <div className="mt-6 rounded-[24px] border border-dashed border-[var(--line-strong)] bg-[var(--surface-muted)]/60 p-5 text-sm leading-7 text-[var(--ink-soft)]">
+            <div className="mt-6 rounded-3xl border border-dashed border-(--line-strong) bg-(--surface-muted)/60 p-5 text-sm leading-7 text-(--ink-soft)">
               Start from your highlighted node in the middle, then add parents
-              above or children below. Last name is optional.
+              above or children below. Each child belongs to a shared family
+              unit, so adding a second parent will join that same connector.
             </div>
           )}
         </div>
@@ -683,7 +732,7 @@ export function WorkspaceCanvas() {
       <button
         type="button"
         onClick={() => centerOnMe(graph)}
-        className="fixed bottom-6 left-6 z-30 rounded-full border border-[var(--line-soft)] bg-white/88 px-5 py-3 text-sm font-semibold text-[var(--ink-strong)] shadow-[0_16px_48px_rgba(32,27,23,0.12)] backdrop-blur transition hover:border-[var(--accent-strong)] hover:bg-[var(--accent-soft)]"
+        className="fixed bottom-6 left-6 z-30 rounded-full border border-(--line-soft) bg-white/88 px-5 py-3 text-sm font-semibold text-(--ink-strong) shadow-[0_16px_48px_rgba(32,27,23,0.12)] backdrop-blur transition hover:border-(--accent-strong) hover:bg-(--accent-soft)"
         style={{ bottom: BUTTON_OFFSET, left: BUTTON_OFFSET }}
       >
         Me
@@ -694,6 +743,90 @@ export function WorkspaceCanvas() {
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
+}
+
+type Point = {
+  x: number;
+  y: number;
+};
+
+type CubicCurve = {
+  start: Point;
+  control1: Point;
+  control2: Point;
+  end: Point;
+};
+
+function createFamilyCurve(parents: PersonNode[]): CubicCurve {
+  if (parents.length === 1) {
+    const bottomY = parents[0].y + NODE_HALF_HEIGHT;
+
+    return {
+      start: { x: parents[0].x - SINGLE_PARENT_STUB, y: bottomY },
+      control1: {
+        x: parents[0].x - SINGLE_PARENT_STUB * 0.45,
+        y: bottomY + PARTNER_CURVE_DEPTH * 0.55,
+      },
+      control2: {
+        x: parents[0].x + SINGLE_PARENT_STUB * 0.45,
+        y: bottomY + PARTNER_CURVE_DEPTH * 0.55,
+      },
+      end: { x: parents[0].x + SINGLE_PARENT_STUB, y: bottomY },
+    };
+  }
+
+  const left = parents[0];
+  const right = parents[parents.length - 1];
+  const startY = left.y + NODE_HALF_HEIGHT;
+  const endY = right.y + NODE_HALF_HEIGHT;
+  const span = right.x - left.x;
+  const depth = clamp(span * 0.18, 34, 88);
+  const controlY = Math.max(startY, endY) + depth;
+  const controlOffsetX = Math.max(span * 0.28, 42);
+
+  return {
+    start: { x: left.x, y: startY },
+    control1: { x: left.x + controlOffsetX, y: controlY },
+    control2: { x: right.x - controlOffsetX, y: controlY },
+    end: { x: right.x, y: endY },
+  };
+}
+
+function describeCubic(curve: CubicCurve) {
+  return `M ${curve.start.x} ${curve.start.y} C ${curve.control1.x} ${curve.control1.y}, ${curve.control2.x} ${curve.control2.y}, ${curve.end.x} ${curve.end.y}`;
+}
+
+function pointOnCubic(curve: CubicCurve, t: number): Point {
+  const oneMinusT = 1 - t;
+
+  return {
+    x:
+      oneMinusT ** 3 * curve.start.x +
+      3 * oneMinusT ** 2 * t * curve.control1.x +
+      3 * oneMinusT * t ** 2 * curve.control2.x +
+      t ** 3 * curve.end.x,
+    y:
+      oneMinusT ** 3 * curve.start.y +
+      3 * oneMinusT ** 2 * t * curve.control1.y +
+      3 * oneMinusT * t ** 2 * curve.control2.y +
+      t ** 3 * curve.end.y,
+  };
+}
+
+function childAttachmentT(
+  child: PersonNode,
+  index: number,
+  totalChildren: number,
+  curve: CubicCurve,
+) {
+  const span = curve.end.x - curve.start.x;
+  if (Math.abs(span) < 1) {
+    const spread = totalChildren <= 1 ? 0 : index / (totalChildren - 1) - 0.5;
+    return clamp(0.5 + spread * 0.35, 0.18, 0.82);
+  }
+
+  const raw = (child.x - curve.start.x) / span;
+  return clamp(raw, 0.08, 0.92);
 }
 
 function formatName(firstName?: string, lastName?: string) {

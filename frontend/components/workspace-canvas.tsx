@@ -135,12 +135,15 @@ export function WorkspaceCanvas() {
     () => new Map(persons.map((person) => [person.id, person])),
     [persons],
   );
-  const headerName = useMemo(() => formatName(user?.firstName, user?.lastName), [
-    user?.firstName,
-    user?.lastName,
-  ]);
+  const headerName = useMemo(
+    () => formatName(user?.firstName, user?.lastName),
+    [user?.firstName, user?.lastName],
+  );
 
-  function centerOnMe(targetGraph: TreeGraph | null, targetZoom = zoomRef.current) {
+  function centerOnMe(
+    targetGraph: TreeGraph | null,
+    targetZoom = zoomRef.current,
+  ) {
     if (!targetGraph || typeof window === "undefined") {
       return;
     }
@@ -188,14 +191,20 @@ export function WorkspaceCanvas() {
 
       if (interaction.type === "pan") {
         setCamera({
-          x: interaction.startCameraX + (event.clientX - interaction.startPointerX),
-          y: interaction.startCameraY + (event.clientY - interaction.startPointerY),
+          x:
+            interaction.startCameraX +
+            (event.clientX - interaction.startPointerX),
+          y:
+            interaction.startCameraY +
+            (event.clientY - interaction.startPointerY),
         });
         return;
       }
 
-      const deltaX = (event.clientX - interaction.startPointerX) / zoomRef.current;
-      const deltaY = (event.clientY - interaction.startPointerY) / zoomRef.current;
+      const deltaX =
+        (event.clientX - interaction.startPointerX) / zoomRef.current;
+      const deltaY =
+        (event.clientY - interaction.startPointerY) / zoomRef.current;
 
       setGraph((current) => {
         if (!current) {
@@ -411,8 +420,8 @@ export function WorkspaceCanvas() {
             Sign in to start building your tree
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--ink-soft)]">
-            The workspace needs an active session before it can load your
-            family graph.
+            The workspace needs an active session before it can load your family
+            graph.
           </p>
           <div className="mt-6 flex gap-3">
             <Link
@@ -450,19 +459,23 @@ export function WorkspaceCanvas() {
           backgroundPosition: `${camera.x}px ${camera.y}px, ${camera.x}px ${camera.y}px, center`,
         }}
       >
-        <svg className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
+        <svg
+          className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+          aria-hidden="true"
+          style={{
+            transform: `translate(${camera.x}px, ${camera.y}px) scale(${zoom})`,
+            transformOrigin: "0 0",
+          }}
+        >
           {relationships.map((relationship) => {
             const parent = personsById.get(relationship.parentPersonId);
             const child = personsById.get(relationship.childPersonId);
+            if (!parent || !child) return null;
 
-            if (!parent || !child) {
-              return null;
-            }
-
-            const parentX = parent.x * zoom + camera.x;
-            const parentY = parent.y * zoom + camera.y + NODE_HALF_HEIGHT * zoom;
-            const childX = child.x * zoom + camera.x;
-            const childY = child.y * zoom + camera.y - NODE_HALF_HEIGHT * zoom;
+            const parentX = parent.x;
+            const parentY = parent.y + NODE_HALF_HEIGHT;
+            const childX = child.x;
+            const childY = child.y - NODE_HALF_HEIGHT;
             const midpointY = (parentY + childY) / 2;
 
             return (
@@ -471,36 +484,38 @@ export function WorkspaceCanvas() {
                 d={`M ${parentX} ${parentY} C ${parentX} ${midpointY}, ${childX} ${midpointY}, ${childX} ${childY}`}
                 fill="none"
                 stroke="rgba(158, 111, 55, 0.45)"
-                strokeWidth={2.2}
+                strokeWidth={2.2 / zoom} // keep stroke visually consistent
                 strokeLinecap="round"
               />
             );
           })}
         </svg>
 
-        {persons.map((person) => (
-          <div
-            key={person.id}
-            className="absolute -translate-x-1/2 -translate-y-1/2"
-            style={{
-              left: person.x * zoom + camera.x,
-              top: person.y * zoom + camera.y,
-              transform: `translate(-50%, -50%) scale(${zoom})`,
-              transformOrigin: "center center",
-            }}
-          >
-            <PersonNodePreview
-              firstName={person.firstName}
-              lastName={person.lastName}
-              note={person.note}
-              highlighted={person.isRoot}
-              isDragging={draggingNodeId === person.id}
-              onPointerDown={(event) => beginNodeDrag(person, event)}
-              onAddParent={() => openDraft(person.id, "parent")}
-              onAddChild={() => openDraft(person.id, "child")}
-            />
-          </div>
-        ))}
+        <div
+          className="absolute origin-top-left"
+          style={{
+            transform: `translate(${camera.x}px, ${camera.y}px) scale(${zoom})`,
+          }}
+        >
+          {persons.map((person) => (
+            <div
+              key={person.id}
+              className="absolute -translate-x-1/2 -translate-y-1/2"
+              style={{ left: person.x, top: person.y }}
+            >
+              <PersonNodePreview
+                firstName={person.firstName}
+                lastName={person.lastName}
+                note={person.note}
+                highlighted={person.isRoot}
+                isDragging={draggingNodeId === person.id}
+                onPointerDown={(event) => beginNodeDrag(person, event)}
+                onAddParent={() => openDraft(person.id, "parent")}
+                onAddChild={() => openDraft(person.id, "child")}
+              />
+            </div>
+          ))}
+        </div>
       </div>
 
       <header className="fixed left-0 right-0 top-0 z-30 flex h-[84px] items-center justify-between px-6 lg:px-8">

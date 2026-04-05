@@ -18,11 +18,13 @@ export function WorkspaceCanvas() {
     pending,
     headerName,
     unionChildLinkCount,
-    openDraft,
+    openCreateDraft,
+    openEditDraft,
+    openDeleteDraft,
     updateDraft,
     closeDraft,
     handleLogout,
-    handleCreateRelative,
+    handleSubmitDraft,
     movePersonLocally,
     persistPersonPosition,
   } = useWorkspaceData();
@@ -70,8 +72,10 @@ export function WorkspaceCanvas() {
       <div className="absolute inset-0">
         <WorkspaceFlow
           graph={graph}
-          onAddParent={(personId) => openDraft(personId, "parent")}
-          onAddChild={(personId) => openDraft(personId, "child")}
+          onAddParent={(personId) => openCreateDraft(personId, "parent")}
+          onAddChild={(personId) => openCreateDraft(personId, "child")}
+          onEditPerson={openEditDraft}
+          onDeletePerson={openDeleteDraft}
           onMovePerson={movePersonLocally}
           onPersistPerson={persistPersonPosition}
         />
@@ -91,7 +95,7 @@ export function WorkspaceCanvas() {
         error={error}
         unionChildLinkCount={unionChildLinkCount}
         onDraftChange={updateDraft}
-        onSubmit={handleCreateRelative}
+        onSubmit={handleSubmitDraft}
         onCancel={closeDraft}
       />
     </div>

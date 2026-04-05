@@ -43,6 +43,8 @@ func NewRouter(cfg config.Config, db *sql.DB) http.Handler {
 		r.Get("/tree", treeHandler(cfg, authService, treeService))
 		r.Get("/tree/graph", graphHandler(cfg, authService, treeService))
 		r.Post("/persons/relative", createRelativeHandler(cfg, authService, treeService))
+		r.Patch("/persons/{personID}", updatePersonHandler(cfg, authService, treeService))
+		r.Delete("/persons/{personID}", deletePersonHandler(cfg, authService, treeService))
 		r.Patch("/persons/{personID}/position", updatePersonPositionHandler(cfg, authService, treeService))
 	})
 

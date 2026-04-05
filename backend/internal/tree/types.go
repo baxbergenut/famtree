@@ -11,6 +11,7 @@ var (
 	ErrInvalidRelation    = errors.New("invalid relation")
 	ErrInvalidPersonInput = errors.New("invalid person input")
 	ErrParentLimitReached = errors.New("child already has two parents")
+	ErrCannotDeleteRoot   = errors.New("cannot delete root person")
 )
 
 type Service struct {
@@ -69,6 +70,14 @@ type UpdatePositionInput struct {
 	PersonID string
 	X        float64
 	Y        float64
+}
+
+type UpdatePersonInput struct {
+	PersonID  string
+	FirstName string
+	LastName  string
+	Note      *string
+	BirthDate *string
 }
 
 func NewService(db *sql.DB) *Service {

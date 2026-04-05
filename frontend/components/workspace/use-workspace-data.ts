@@ -1,32 +1,29 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   createRelative,
+  deletePerson,
   getCurrentSession,
   getTreeGraph,
   logout,
+  updatePerson,
   updatePersonPosition,
   type SessionUser,
   type TreeGraph,
 } from "@/lib/api";
 
-import { emptyDraft, type RelativeDraft } from "@/components/workspace/types";
+import { type PersonDraft } from "@/components/workspace/types";
 
 export function useWorkspaceData() {
-  const graphRef = useRef<TreeGraph | null>(null);
   const [user, setUser] = useState<SessionUser | null>(null);
   const [graph, setGraph] = useState<TreeGraph | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [draft, setDraft] = useState<RelativeDraft | null>(null);
-  const [pending, startTransition] = useTransition();
-
-  useEffect(() => {
-    graphRef.current = graph;
-  }, [graph]);
+  const [draft, setDraft] = useState<PersonDraft | null>(null);
+  const [pending, setPending] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -82,11 +79,57 @@ export function useWorkspaceData() {
     [graph?.unions],
   );
 
-  function openDraft(anchorPersonId: string, relation: "parent" | "child") {
+  function openCreateDraft(personId: string, relation: "parent" | "child") {
+    const person = findPerson(graph, personId);
+    if (!person) {
+      return;
+    }
+
     setDraft({
-      ...emptyDraft,
-      anchorPersonId,
+      mode: "create",
+      personId,
       relation,
+      firstName: "",
+      lastName: "",
+      note: "",
+      birthDate: "",
+      isRoot: person.isRoot,
+    });
+    setError(null);
+  }
+
+  function openEditDraft(personId: string) {
+    const person = findPerson(graph, personId);
+    if (!person) {
+      return;
+    }
+
+    setDraft({
+      mode: "edit",
+      personId,
+      firstName: person.firstName,
+      lastName: person.lastName,
+      note: person.note ?? "",
+      birthDate: person.birthDate ?? "",
+      isRoot: person.isRoot,
+    });
+    setError(null);
+  }
+
+  function openDeleteDraft(personId: string) {
+    const person = findPerson(graph, personId);
+    if (!person) {
+      return;
+    }
+
+    setDraft({
+      mode: "delete",
+      personId,
+      firstName: person.firstName,
+      lastName: person.lastName,
+      note: person.note ?? "",
+      birthDate: person.birthDate ?? "",
+      isRoot: person.isRoot,
     });
     setError(null);
   }
@@ -96,7 +139,7 @@ export function useWorkspaceData() {
   ) {
     const { name, value } = event.target;
     setDraft((current) =>
-      current
+      current && current.mode !== "delete"
         ? {
             ...current,
             [name]: value,
@@ -128,35 +171,47 @@ export function useWorkspaceData() {
     }
   }
 
-  function handleCreateRelative(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmitDraft(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!draft) {
       return;
     }
 
     setError(null);
+    setPending(true);
 
-    startTransition(async () => {
-      try {
-        const updatedGraph = await createRelative({
-          anchorPersonId: draft.anchorPersonId,
-          relation: draft.relation,
-          firstName: draft.firstName,
-          lastName: draft.lastName,
-          note: draft.note || undefined,
-          birthDate: draft.birthDate || undefined,
-        });
+    try {
+      const updatedGraph =
+        draft.mode === "create"
+          ? await createRelative({
+              anchorPersonId: draft.personId,
+              relation: draft.relation,
+              firstName: draft.firstName,
+              lastName: draft.lastName,
+              note: draft.note || undefined,
+              birthDate: draft.birthDate || undefined,
+            })
+          : draft.mode === "edit"
+            ? await updatePerson({
+                personId: draft.personId,
+                firstName: draft.firstName,
+                lastName: draft.lastName,
+                note: draft.note || undefined,
+                birthDate: draft.birthDate || undefined,
+              })
+            : await deletePerson(draft.personId);
 
-        setGraph(updatedGraph);
-        setDraft(null);
-      } catch (submitError) {
-        setError(
-          submitError instanceof Error
-            ? submitError.message
-            : "Failed to create relative.",
-        );
-      }
-    });
+      setGraph(updatedGraph);
+      setDraft(null);
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Failed to save person changes.",
+      );
+    } finally {
+      setPending(false);
+    }
   }
 
   function movePersonLocally(personId: string, position: { x: number; y: number }) {
@@ -202,14 +257,20 @@ export function useWorkspaceData() {
     pending,
     headerName,
     unionChildLinkCount,
-    openDraft,
+    openCreateDraft,
+    openEditDraft,
+    openDeleteDraft,
     updateDraft,
     closeDraft,
     handleLogout,
-    handleCreateRelative,
+    handleSubmitDraft,
     movePersonLocally,
     persistPersonPosition,
   };
+}
+
+function findPerson(graph: TreeGraph | null, personId: string) {
+  return graph?.persons.find((person) => person.id === personId) ?? null;
 }
 
 function formatName(firstName?: string, lastName?: string) {

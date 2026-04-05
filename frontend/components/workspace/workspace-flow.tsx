@@ -7,14 +7,17 @@ import {
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
+  type Node,
+  type NodeChange,
   type OnNodeDrag,
   type OnNodesChange,
 } from "@xyflow/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
-  buildFlowGraph,
+  buildFlowEdges,
   buildPersonNodes,
+  buildUnionNodes,
   workspaceEdgeTypes,
   workspaceNodeTypes,
 } from "@/components/workspace/graph-builder";
@@ -32,6 +35,8 @@ type WorkspaceFlowProps = {
   graph: TreeGraph;
   onAddParent: (personId: string) => void;
   onAddChild: (personId: string) => void;
+  onEditPerson: (personId: string) => void;
+  onDeletePerson: (personId: string) => void;
   onMovePerson: (personId: string, position: { x: number; y: number }) => void;
   onPersistPerson: (
     personId: string,
@@ -51,6 +56,8 @@ function WorkspaceFlowInner({
   graph,
   onAddParent,
   onAddChild,
+  onEditPerson,
+  onDeletePerson,
   onMovePerson,
   onPersistPerson,
 }: WorkspaceFlowProps) {
@@ -61,20 +68,22 @@ function WorkspaceFlowInner({
       buildPersonNodes(graph, {
         onAddParent,
         onAddChild,
+        onEditPerson,
+        onDeletePerson,
       }),
-    [graph, onAddChild, onAddParent],
+    [graph, onAddChild, onAddParent, onDeletePerson, onEditPerson],
   );
-  const [personNodes, setPersonNodes] =
-    useState<PersonFlowNodeType[]>(basePersonNodes);
+  const baseNodes = useMemo(
+    () => [...basePersonNodes, ...buildUnionNodes(graph, basePersonNodes)],
+    [basePersonNodes, graph],
+  );
+  const [nodes, setNodes] = useState<Node[]>(baseNodes);
 
   useEffect(() => {
-    setPersonNodes(basePersonNodes);
-  }, [basePersonNodes]);
+    setNodes(baseNodes);
+  }, [baseNodes]);
 
-  const { nodes, edges } = useMemo(
-    () => buildFlowGraph(graph, personNodes),
-    [graph, personNodes],
-  );
+  const edges = useMemo(() => buildFlowEdges(graph), [graph]);
 
   useEffect(() => {
     if (lastCenteredRootIdRef.current === graph.rootPersonId) {
@@ -102,11 +111,12 @@ function WorkspaceFlowInner({
   }, [graph, setCenter]);
 
   const handleNodesChange: OnNodesChange = (changes) => {
-    setPersonNodes((currentNodes) =>
-      applyNodeChanges(
-        changes as Parameters<typeof applyNodeChanges<PersonFlowNodeType>>[0],
-        currentNodes,
-      ),
+    if (!changes.some(isPersonNodeChange)) {
+      return;
+    }
+
+    setNodes((currentNodes) =>
+      syncUnionNodePositions(graph, applyNodeChanges(changes, currentNodes)),
     );
   };
 
@@ -151,4 +161,44 @@ function WorkspaceFlowInner({
       </ReactFlow>
     </div>
   );
+}
+
+function isPersonNodeChange(
+  change: NodeChange,
+): change is NodeChange<PersonFlowNodeType> {
+  return "id" in change && change.id.startsWith("person:");
+}
+
+function syncUnionNodePositions(graph: TreeGraph, nodes: Node[]) {
+  const personNodes = nodes.filter(isPersonFlowNode);
+  const nextUnionNodes = buildUnionNodes(graph, personNodes);
+  const nextUnionNodeById = new Map(
+    nextUnionNodes.map((unionNode) => [unionNode.id, unionNode]),
+  );
+  const syncedNodes = nodes.map((node) => {
+    if (node.type !== "union") {
+      return node;
+    }
+
+    const nextUnionNode = nextUnionNodeById.get(node.id);
+    if (!nextUnionNode) {
+      return node;
+    }
+
+    return {
+      ...node,
+      position: nextUnionNode.position,
+      data: nextUnionNode.data,
+    };
+  });
+  const existingNodeIds = new Set(syncedNodes.map((node) => node.id));
+
+  return [
+    ...syncedNodes,
+    ...nextUnionNodes.filter((unionNode) => !existingNodeIds.has(unionNode.id)),
+  ];
+}
+
+function isPersonFlowNode(node: Node): node is PersonFlowNodeType {
+  return node.type === "person";
 }

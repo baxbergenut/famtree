@@ -1,4 +1,4 @@
-import type { Edge, EdgeTypes, Node, NodeTypes } from "@xyflow/react";
+import type { Edge, EdgeTypes, NodeTypes } from "@xyflow/react";
 
 import {
   PERSON_NODE_HEIGHT,
@@ -20,6 +20,8 @@ import type { TreeGraph } from "@/lib/api";
 type FlowBuildActions = {
   onAddParent: (personId: string) => void;
   onAddChild: (personId: string) => void;
+  onEditPerson: (personId: string) => void;
+  onDeletePerson: (personId: string) => void;
 };
 
 type Point = {
@@ -54,6 +56,8 @@ export function buildPersonNodes(
         person,
         onAddParent: actions.onAddParent,
         onAddChild: actions.onAddChild,
+        onEditPerson: actions.onEditPerson,
+        onDeletePerson: actions.onDeletePerson,
       } satisfies PersonFlowData,
     } satisfies PersonFlowNodeType);
   }
@@ -61,12 +65,11 @@ export function buildPersonNodes(
   return nodes;
 }
 
-export function buildFlowGraph(
+export function buildUnionNodes(
   graph: TreeGraph,
   personNodes: PersonFlowNodeType[],
-): { nodes: Node[]; edges: Edge[] } {
-  const nodes: Node[] = [...personNodes];
-  const edges: Edge[] = [];
+): UnionFlowNodeType[] {
+  const nodes: UnionFlowNodeType[] = [];
   const personCenters = getPersonCenters(personNodes);
 
   for (const unionNode of graph.unions) {
@@ -90,7 +93,15 @@ export function buildFlowGraph(
         childCount: unionNode.childIds.length,
       } satisfies UnionFlowData,
     } satisfies UnionFlowNodeType);
+  }
 
+  return nodes;
+}
+
+export function buildFlowEdges(graph: TreeGraph): Edge[] {
+  const edges: Edge[] = [];
+
+  for (const unionNode of graph.unions) {
     unionNode.parentIds.forEach((parentId, index) => {
       edges.push({
         id: `${personNodeId(parentId)}->${unionNodeId(unionNode.id)}:${index}`,
@@ -116,7 +127,7 @@ export function buildFlowGraph(
     });
   }
 
-  return { nodes, edges };
+  return edges;
 }
 
 export function personNodeId(personId: string) {

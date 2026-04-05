@@ -291,6 +291,99 @@ func updatePersonPositionHandler(cfg config.Config, authService *auth.Service, t
 	}
 }
 
+func updatePersonHandler(cfg config.Config, authService *auth.Service, treeService *tree.Service) http.HandlerFunc {
+	type request struct {
+		FirstName string  `json:"firstName"`
+		LastName  string  `json:"lastName"`
+		Note      *string `json:"note"`
+		BirthDate *string `json:"birthDate"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := authService.CurrentUser(r.Context(), readSessionToken(r, cfg))
+		if err != nil {
+			if errors.Is(err, auth.ErrUnauthorized) {
+				writeError(w, http.StatusUnauthorized, "not authenticated")
+				return
+			}
+			writeError(w, http.StatusInternalServerError, "failed to load session")
+			return
+		}
+
+		personID := chi.URLParam(r, "personID")
+		if personID == "" {
+			writeError(w, http.StatusBadRequest, "missing person id")
+			return
+		}
+
+		var payload request
+		if err := readJSON(r, &payload); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid request body")
+			return
+		}
+
+		graph, err := treeService.UpdatePerson(r.Context(), user.UserID, tree.UpdatePersonInput{
+			PersonID:  personID,
+			FirstName: payload.FirstName,
+			LastName:  payload.LastName,
+			Note:      payload.Note,
+			BirthDate: payload.BirthDate,
+		})
+		if err != nil {
+			switch {
+			case errors.Is(err, tree.ErrInvalidPersonInput):
+				writeError(w, http.StatusBadRequest, "name is required")
+			case errors.Is(err, tree.ErrPersonNotFound):
+				writeError(w, http.StatusNotFound, "person not found")
+			default:
+				writeError(w, http.StatusInternalServerError, "failed to update person")
+			}
+			return
+		}
+
+		writeJSON(w, http.StatusOK, map[string]any{
+			"graph": graph,
+		})
+	}
+}
+
+func deletePersonHandler(cfg config.Config, authService *auth.Service, treeService *tree.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := authService.CurrentUser(r.Context(), readSessionToken(r, cfg))
+		if err != nil {
+			if errors.Is(err, auth.ErrUnauthorized) {
+				writeError(w, http.StatusUnauthorized, "not authenticated")
+				return
+			}
+			writeError(w, http.StatusInternalServerError, "failed to load session")
+			return
+		}
+
+		personID := chi.URLParam(r, "personID")
+		if personID == "" {
+			writeError(w, http.StatusBadRequest, "missing person id")
+			return
+		}
+
+		graph, err := treeService.DeletePerson(r.Context(), user.UserID, personID)
+		if err != nil {
+			switch {
+			case errors.Is(err, tree.ErrCannotDeleteRoot):
+				writeError(w, http.StatusBadRequest, "the root person cannot be deleted")
+			case errors.Is(err, tree.ErrPersonNotFound):
+				writeError(w, http.StatusNotFound, "person not found")
+			default:
+				writeError(w, http.StatusInternalServerError, "failed to delete person")
+			}
+			return
+		}
+
+		writeJSON(w, http.StatusOK, map[string]any{
+			"graph": graph,
+		})
+	}
+}
+
 func setSessionCookie(w http.ResponseWriter, cfg config.Config, token string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     cfg.SessionCookie,

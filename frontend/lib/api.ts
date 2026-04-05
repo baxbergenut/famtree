@@ -70,6 +70,14 @@ export type CreateRelativePayload = {
   birthDate?: string;
 };
 
+export type UpdatePersonPayload = {
+  personId: string;
+  firstName: string;
+  lastName: string;
+  note?: string;
+  birthDate?: string;
+};
+
 type ApiError = {
   error?: string;
 };
@@ -207,4 +215,43 @@ export async function updatePersonPosition(
     const payload = (await response.json().catch(() => ({}))) as ApiError;
     throw new Error(payload.error || "Failed to update person position");
   }
+}
+
+export async function updatePerson(
+  payload: UpdatePersonPayload,
+): Promise<TreeGraph> {
+  const response = await fetch(`${API_BASE_URL}/v1/persons/${payload.personId}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      firstName: payload.firstName,
+      lastName: payload.lastName,
+      note: payload.note,
+      birthDate: payload.birthDate,
+    }),
+  });
+
+  const data = await parseResponse<{ graph: TreeGraph }>(response);
+  return {
+    ...data.graph,
+    persons: Array.isArray(data.graph.persons) ? data.graph.persons : [],
+    unions: Array.isArray(data.graph.unions) ? data.graph.unions : [],
+  };
+}
+
+export async function deletePerson(personId: string): Promise<TreeGraph> {
+  const response = await fetch(`${API_BASE_URL}/v1/persons/${personId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+
+  const data = await parseResponse<{ graph: TreeGraph }>(response);
+  return {
+    ...data.graph,
+    persons: Array.isArray(data.graph.persons) ? data.graph.persons : [],
+    unions: Array.isArray(data.graph.unions) ? data.graph.unions : [],
+  };
 }

@@ -144,6 +144,95 @@ func (s *Service) UpdatePosition(ctx context.Context, ownerUserID string, input 
 	return nil
 }
 
+func (s *Service) UpdatePerson(ctx context.Context, ownerUserID string, input UpdatePersonInput) (Graph, error) {
+	input.FirstName = strings.TrimSpace(input.FirstName)
+	input.LastName = strings.TrimSpace(input.LastName)
+	if input.PersonID == "" {
+		return Graph{}, ErrPersonNotFound
+	}
+
+	if input.FirstName == "" {
+		return Graph{}, ErrInvalidPersonInput
+	}
+
+	result, err := s.db.ExecContext(ctx, `
+		UPDATE persons p
+		SET
+			first_name = $1,
+			last_name = $2,
+			note = $3,
+			birth_date = $4,
+			updated_at = NOW()
+		FROM trees t
+		WHERE p.id = $5
+		  AND p.tree_id = t.id
+		  AND t.owner_user_id = $6
+	`, input.FirstName, input.LastName, nullableString(input.Note), nullableString(input.BirthDate), input.PersonID, ownerUserID)
+	if err != nil {
+		return Graph{}, err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return Graph{}, err
+	}
+
+	if rowsAffected == 0 {
+		return Graph{}, ErrPersonNotFound
+	}
+
+	return s.GetGraphByOwnerUserID(ctx, ownerUserID)
+}
+
+func (s *Service) DeletePerson(ctx context.Context, ownerUserID string, personID string) (Graph, error) {
+	if personID == "" {
+		return Graph{}, ErrPersonNotFound
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Graph{}, err
+	}
+	defer tx.Rollback()
+
+	var treeID string
+	var isRoot bool
+	err = tx.QueryRowContext(ctx, `
+		SELECT p.tree_id, p.id = t.root_person_id AS is_root
+		FROM persons p
+		JOIN trees t ON t.id = p.tree_id
+		WHERE p.id = $1
+		  AND t.owner_user_id = $2
+	`, personID, ownerUserID).Scan(&treeID, &isRoot)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Graph{}, ErrPersonNotFound
+		}
+		return Graph{}, err
+	}
+
+	if isRoot {
+		return Graph{}, ErrCannotDeleteRoot
+	}
+
+	if _, err := tx.ExecContext(ctx, `
+		DELETE FROM persons
+		WHERE id = $1
+	`, personID); err != nil {
+		return Graph{}, err
+	}
+
+	if err := s.deleteUnparentedUnions(ctx, tx, treeID); err != nil {
+		return Graph{}, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return Graph{}, err
+	}
+
+	return s.GetGraphByOwnerUserID(ctx, ownerUserID)
+}
+
 func (s *Service) calculateParentPlacement(
 	ctx context.Context,
 	tx *sql.Tx,
@@ -333,6 +422,20 @@ func (s *Service) touchUnion(ctx context.Context, tx *sql.Tx, unionID string) er
 		SET updated_at = NOW()
 		WHERE id = $1
 	`, unionID)
+
+	return err
+}
+
+func (s *Service) deleteUnparentedUnions(ctx context.Context, tx *sql.Tx, treeID string) error {
+	_, err := tx.ExecContext(ctx, `
+		DELETE FROM family_units fu
+		WHERE fu.tree_id = $1
+		  AND NOT EXISTS (
+			SELECT 1
+			FROM family_unit_parents fup
+			WHERE fup.family_unit_id = fu.id
+		  )
+	`, treeID)
 
 	return err
 }

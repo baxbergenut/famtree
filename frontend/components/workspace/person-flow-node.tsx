@@ -11,6 +11,8 @@ export type PersonFlowData = {
   person: PersonNode;
   onAddParent: (personId: string) => void;
   onAddChild: (personId: string) => void;
+  onEditPerson: (personId: string) => void;
+  onDeletePerson: (personId: string) => void;
 };
 
 export type PersonFlowNodeType = Node<PersonFlowData, "person">;
@@ -19,7 +21,7 @@ export function PersonFlowNode({
   data,
   dragging,
 }: NodeProps<PersonFlowNodeType>) {
-  const { person, onAddParent, onAddChild } = data;
+  const { person, onAddParent, onAddChild, onEditPerson, onDeletePerson } = data;
   const fullName = [person.firstName, person.lastName].filter(Boolean).join(" ");
 
   return (
@@ -86,7 +88,7 @@ export function PersonFlowNode({
         ) : null}
       </div>
 
-      <div className="mt-5 flex gap-2">
+      <div className="mt-5 flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => onAddParent(person.id)}
@@ -100,6 +102,22 @@ export function PersonFlowNode({
           className="nodrag rounded-full border border-[var(--line-soft)] px-3 py-2 text-xs font-medium text-[var(--ink-soft)] transition hover:border-[var(--accent-strong)] hover:bg-[var(--accent-soft)]"
         >
           Add child
+        </button>
+        <button
+          type="button"
+          onClick={() => onEditPerson(person.id)}
+          className="nodrag rounded-full border border-[var(--line-soft)] px-3 py-2 text-xs font-medium text-[var(--ink-soft)] transition hover:border-[var(--accent-strong)] hover:bg-[var(--accent-soft)]"
+        >
+          Edit
+        </button>
+        <button
+          type="button"
+          onClick={() => onDeletePerson(person.id)}
+          disabled={person.isRoot}
+          title={person.isRoot ? "The root person cannot be deleted" : undefined}
+          className="nodrag rounded-full border border-[#d8b5a5] px-3 py-2 text-xs font-medium text-[#8f4226] transition hover:bg-[#fff1ec] disabled:cursor-not-allowed disabled:opacity-45"
+        >
+          Delete
         </button>
       </div>
     </article>

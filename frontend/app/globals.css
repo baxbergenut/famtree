@@ -1,16 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f6f1ea;
-  --foreground: #2f2722;
-  --surface-panel: rgba(250, 245, 238, 0.78);
-  --surface-muted: #f1e7d8;
-  --line-soft: rgba(110, 89, 67, 0.14);
-  --line-strong: rgba(110, 89, 67, 0.24);
-  --ink-strong: #2f2722;
-  --ink-soft: #6d5a49;
-  --accent-strong: #9e6f37;
-  --accent-soft: #eedec6;
+  --background: #070b14;
+  --foreground: #f4f1e8;
+  --surface-panel: rgba(16, 21, 33, 0.84);
+  --surface-muted: #111827;
+  --line-soft: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --ink-strong: #f4f1e8;
+  --ink-soft: #a7b0c2;
+  --accent-strong: #d0a060;
+  --accent-soft: rgba(208, 160, 96, 0.14);
 }
 
 @theme inline {
@@ -26,8 +26,14 @@
 
 html {
   background:
-    radial-gradient(circle at top, rgba(255, 247, 236, 0.92), transparent 36%),
-    linear-gradient(180deg, #fbf7f0 0%, #f3ece2 100%);
+    radial-gradient(circle at top, rgba(54, 83, 133, 0.32), transparent 36%),
+    radial-gradient(
+      circle at bottom right,
+      rgba(208, 160, 96, 0.16),
+      transparent 28%
+    ),
+    linear-gradient(180deg, #070b14 0%, #0b1220 100%);
+  color-scheme: dark;
 }
 
 body {
@@ -47,8 +53,11 @@ input {
 }
 
 .workspace-flow {
-  background:
-    radial-gradient(circle at center, rgba(255, 255, 255, 0.92), rgba(244, 235, 224, 0.88));
+  background: radial-gradient(
+    circle at center,
+    rgba(15, 21, 35, 0.92),
+    rgba(7, 11, 20, 0.94)
+  );
 }
 
 .react-flow__pane {

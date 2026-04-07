@@ -13,8 +13,7 @@ export type UnionFlowData = {
 export type UnionFlowNodeType = Node<UnionFlowData, "union">;
 
 export function UnionFlowNode({ data }: NodeProps<UnionFlowNodeType>) {
-  const handlePositions =
-    data.parentCount <= 1 ? ["50%"] : ["22%", "78%"];
+  const handlePositions = data.parentCount <= 1 ? ["50%"] : ["22%", "78%"];
 
   return (
     <div className="pointer-events-none relative h-[22px] w-[72px]">
@@ -34,9 +33,9 @@ export function UnionFlowNode({ data }: NodeProps<UnionFlowNodeType>) {
         position={Position.Bottom}
         className="!h-2.5 !w-2.5 !border-0 !bg-transparent"
       />
-      <div className="absolute left-1/2 top-1/2 h-[10px] w-[56px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[rgba(158,111,55,0.24)] bg-[linear-gradient(180deg,rgba(247,238,225,0.96),rgba(237,223,199,0.84))] shadow-[0_10px_28px_rgba(56,40,24,0.08)]" />
+      <div className="absolute left-1/2 top-1/2 h-[10px] w-[56px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[rgba(208,160,96,0.2)] bg-[linear-gradient(180deg,rgba(208,160,96,0.24),rgba(208,160,96,0.1))] shadow-[0_10px_28px_rgba(0,0,0,0.18)]" />
       {data.childCount > 0 ? (
-        <div className="absolute left-1/2 top-1/2 h-[4px] w-[4px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[rgba(158,111,55,0.42)]" />
+        <div className="absolute left-1/2 top-1/2 h-[4px] w-[4px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[rgba(208,160,96,0.46)]" />
       ) : null}
     </div>
   );

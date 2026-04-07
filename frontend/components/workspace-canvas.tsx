@@ -15,6 +15,8 @@ export function WorkspaceCanvas() {
     loading,
     loggingOut,
     draft,
+    selectedPerson,
+    selectedPersonId,
     pending,
     headerName,
     unionChildLinkCount,
@@ -23,6 +25,7 @@ export function WorkspaceCanvas() {
     openDeleteDraft,
     updateDraft,
     closeDraft,
+    selectPerson,
     handleLogout,
     handleSubmitDraft,
     movePersonLocally,
@@ -31,7 +34,7 @@ export function WorkspaceCanvas() {
 
   if (loading) {
     return (
-      <section className="flex min-h-screen items-center justify-center bg-[var(--background)] text-sm text-[var(--ink-soft)]">
+      <section className="flex min-h-screen items-center justify-center bg-background text-sm text-(--ink-soft)">
         Loading your tree from PostgreSQL...
       </section>
     );
@@ -39,25 +42,25 @@ export function WorkspaceCanvas() {
 
   if (!user || !graph) {
     return (
-      <section className="flex min-h-screen items-center justify-center bg-[var(--background)] px-6">
-        <div className="w-full max-w-2xl rounded-[32px] border border-[var(--line-soft)] bg-white/80 p-8 shadow-[0_20px_80px_rgba(31,27,24,0.08)]">
-          <h2 className="text-2xl font-semibold text-[var(--ink-strong)]">
+      <section className="flex min-h-screen items-center justify-center bg-background px-6">
+        <div className="w-full max-w-2xl rounded-4xl border border-(--line-soft) bg-[rgba(10,15,25,0.84)] p-8 shadow-[0_20px_80px_rgba(0,0,0,0.26)]">
+          <h2 className="text-2xl font-semibold text-(--ink-strong)">
             Sign in to start building your tree
           </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--ink-soft)]">
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-(--ink-soft)">
             The workspace needs an active session before it can load your family
             graph.
           </p>
           <div className="mt-6 flex gap-3">
             <Link
               href="/register"
-              className="rounded-full bg-[var(--ink-strong)] px-5 py-3 text-sm font-semibold text-white"
+              className="rounded-full bg-(--ink-strong) px-5 py-3 text-sm font-semibold text-[#07101d]"
             >
               Register
             </Link>
             <Link
               href="/login"
-              className="rounded-full border border-[var(--line-strong)] bg-[var(--surface-muted)] px-5 py-3 text-sm font-semibold text-[var(--ink-strong)]"
+              className="rounded-full border border-(--line-strong) bg-(--surface-muted) px-5 py-3 text-sm font-semibold text-(--ink-strong)"
             >
               Log in
             </Link>
@@ -68,14 +71,12 @@ export function WorkspaceCanvas() {
   }
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-[var(--background)]">
+    <div className="fixed inset-0 overflow-hidden bg-background">
       <div className="absolute inset-0">
         <WorkspaceFlow
           graph={graph}
-          onAddParent={(personId) => openCreateDraft(personId, "parent")}
-          onAddChild={(personId) => openCreateDraft(personId, "child")}
-          onEditPerson={openEditDraft}
-          onDeletePerson={openDeleteDraft}
+          selectedPersonId={selectedPersonId}
+          onSelectPerson={selectPerson}
           onMovePerson={movePersonLocally}
           onPersistPerson={persistPersonPosition}
         />
@@ -90,10 +91,21 @@ export function WorkspaceCanvas() {
 
       <WorkspaceSidebar
         graph={graph}
+        selectedPerson={selectedPerson}
         draft={draft}
         pending={pending}
         error={error}
         unionChildLinkCount={unionChildLinkCount}
+        onAddParent={() =>
+          selectedPerson && openCreateDraft(selectedPerson.id, "parent")
+        }
+        onAddChild={() =>
+          selectedPerson && openCreateDraft(selectedPerson.id, "child")
+        }
+        onEditPerson={() => selectedPerson && openEditDraft(selectedPerson.id)}
+        onDeletePerson={() =>
+          selectedPerson && openDeleteDraft(selectedPerson.id)
+        }
         onDraftChange={updateDraft}
         onSubmit={handleSubmitDraft}
         onCancel={closeDraft}

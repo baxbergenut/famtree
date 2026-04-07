@@ -9,10 +9,6 @@ export const PERSON_NODE_HEIGHT = 158;
 
 export type PersonFlowData = {
   person: PersonNode;
-  onAddParent: (personId: string) => void;
-  onAddChild: (personId: string) => void;
-  onEditPerson: (personId: string) => void;
-  onDeletePerson: (personId: string) => void;
 };
 
 export type PersonFlowNodeType = Node<PersonFlowData, "person">;
@@ -20,21 +16,32 @@ export type PersonFlowNodeType = Node<PersonFlowData, "person">;
 export function PersonFlowNode({
   data,
   dragging,
+  selected,
 }: NodeProps<PersonFlowNodeType>) {
-  const { person, onAddParent, onAddChild, onEditPerson, onDeletePerson } = data;
-  const fullName = [person.firstName, person.lastName].filter(Boolean).join(" ");
+  const { person } = data;
+  const fullName = [person.firstName, person.lastName]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <article
       data-node-card="true"
       className={[
-        "w-64 select-none rounded-[28px] border bg-white/92 p-5 shadow-[0_24px_80px_rgba(34,27,22,0.12)] backdrop-blur transition-shadow",
-        dragging ? "shadow-[0_30px_110px_rgba(34,27,22,0.2)]" : "",
+        "relative isolate w-64 select-none overflow-visible rounded-[28px] border bg-[rgba(28,36,56,0.96)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.36)] backdrop-blur transition-shadow",
+        dragging ? "shadow-[0_30px_110px_rgba(0,0,0,0.38)]" : "",
+        selected ? "ring-2 ring-[rgba(116,164,255,0.45)]" : "",
         person.isRoot
-          ? "border-[var(--accent-strong)] ring-2 ring-[var(--accent-soft)]"
-          : "border-[var(--line-soft)]",
+          ? "border-[rgba(140,190,255,0.78)] shadow-[0_0_0_1px_rgba(140,190,255,0.4),0_0_36px_rgba(88,153,255,0.58),0_0_84px_rgba(70,126,255,0.46),0_32px_110px_rgba(18,36,86,0.52)]"
+          : "border-[rgba(255,255,255,0.18)]",
       ].join(" ")}
     >
+      {person.isRoot ? (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -inset-7 -z-10 rounded-[40px] bg-[radial-gradient(circle,rgba(98,168,255,0.68)_0%,rgba(72,136,255,0.4)_42%,rgba(35,76,184,0.12)_74%,rgba(14,26,68,0)_100%)] blur-2xl"
+        />
+      ) : null}
+
       <Handle
         id="person-target"
         type="target"
@@ -54,7 +61,7 @@ export function PersonFlowNode({
             className={[
               "flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border text-lg font-semibold",
               person.isRoot
-                ? "border-[var(--accent-strong)] bg-[var(--accent-soft)] text-[var(--accent-strong)]"
+                ? "border-[var(--accent-strong)] bg-[rgba(208,160,96,0.16)] text-[var(--accent-strong)]"
                 : "border-[var(--line-strong)] bg-[var(--surface-muted)] text-[var(--ink-soft)]",
             ].join(" ")}
             aria-hidden="true"
@@ -77,48 +84,12 @@ export function PersonFlowNode({
               {fullName}
             </p>
             {person.note ? (
-              <p className="mt-1 text-sm text-[var(--ink-soft)]">{person.note}</p>
+              <p className="mt-1 text-sm text-[var(--ink-soft)]">
+                {person.note}
+              </p>
             ) : null}
           </div>
         </div>
-        {person.isRoot ? (
-          <span className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-[11px] font-semibold tracking-[0.18em] text-[var(--accent-strong)] uppercase">
-            Me
-          </span>
-        ) : null}
-      </div>
-
-      <div className="mt-5 flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => onAddParent(person.id)}
-          className="nodrag rounded-full border border-[var(--line-soft)] px-3 py-2 text-xs font-medium text-[var(--ink-soft)] transition hover:border-[var(--accent-strong)] hover:bg-[var(--accent-soft)]"
-        >
-          Add parent
-        </button>
-        <button
-          type="button"
-          onClick={() => onAddChild(person.id)}
-          className="nodrag rounded-full border border-[var(--line-soft)] px-3 py-2 text-xs font-medium text-[var(--ink-soft)] transition hover:border-[var(--accent-strong)] hover:bg-[var(--accent-soft)]"
-        >
-          Add child
-        </button>
-        <button
-          type="button"
-          onClick={() => onEditPerson(person.id)}
-          className="nodrag rounded-full border border-[var(--line-soft)] px-3 py-2 text-xs font-medium text-[var(--ink-soft)] transition hover:border-[var(--accent-strong)] hover:bg-[var(--accent-soft)]"
-        >
-          Edit
-        </button>
-        <button
-          type="button"
-          onClick={() => onDeletePerson(person.id)}
-          disabled={person.isRoot}
-          title={person.isRoot ? "The root person cannot be deleted" : undefined}
-          className="nodrag rounded-full border border-[#d8b5a5] px-3 py-2 text-xs font-medium text-[#8f4226] transition hover:bg-[#fff1ec] disabled:cursor-not-allowed disabled:opacity-45"
-        >
-          Delete
-        </button>
       </div>
     </article>
   );

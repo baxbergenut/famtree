@@ -17,13 +17,6 @@ import {
 import { RelationshipEdge } from "@/components/workspace/relationship-edge";
 import type { TreeGraph } from "@/lib/api";
 
-type FlowBuildActions = {
-  onAddParent: (personId: string) => void;
-  onAddChild: (personId: string) => void;
-  onEditPerson: (personId: string) => void;
-  onDeletePerson: (personId: string) => void;
-};
-
 type Point = {
   x: number;
   y: number;
@@ -40,7 +33,6 @@ export const workspaceEdgeTypes: EdgeTypes = {
 
 export function buildPersonNodes(
   graph: TreeGraph,
-  actions: FlowBuildActions,
 ): PersonFlowNodeType[] {
   const nodes: PersonFlowNodeType[] = [];
   for (const person of graph.persons) {
@@ -54,10 +46,6 @@ export function buildPersonNodes(
       dragHandle: "[data-node-card='true']",
       data: {
         person,
-        onAddParent: actions.onAddParent,
-        onAddChild: actions.onAddChild,
-        onEditPerson: actions.onEditPerson,
-        onDeletePerson: actions.onDeletePerson,
       } satisfies PersonFlowData,
     } satisfies PersonFlowNodeType);
   }

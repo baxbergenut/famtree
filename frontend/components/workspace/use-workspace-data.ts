@@ -24,6 +24,7 @@ export function useWorkspaceData() {
   const [loggingOut, setLoggingOut] = useState(false);
   const [draft, setDraft] = useState<PersonDraft | null>(null);
   const [pending, setPending] = useState(false);
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -78,6 +79,26 @@ export function useWorkspaceData() {
       ),
     [graph?.unions],
   );
+
+  const selectedPerson = useMemo(() => {
+    if (!graph || !selectedPersonId) {
+      return null;
+    }
+
+    return graph.persons.find((person) => person.id === selectedPersonId) ?? null;
+  }, [graph, selectedPersonId]);
+
+  useEffect(() => {
+    if (!selectedPersonId || !graph) {
+      return;
+    }
+
+    const exists = graph.persons.some((person) => person.id === selectedPersonId);
+    if (!exists) {
+      setSelectedPersonId(null);
+      setDraft(null);
+    }
+  }, [graph, selectedPersonId]);
 
   function openCreateDraft(personId: string, relation: "parent" | "child") {
     const person = findPerson(graph, personId);
@@ -141,15 +162,21 @@ export function useWorkspaceData() {
     setDraft((current) =>
       current && current.mode !== "delete"
         ? {
-            ...current,
-            [name]: value,
-          }
+          ...current,
+          [name]: value,
+        }
         : current,
     );
   }
 
   function closeDraft() {
     setDraft(null);
+  }
+
+  function selectPerson(personId: string | null) {
+    setSelectedPersonId(personId);
+    setDraft(null);
+    setError(null);
   }
 
   async function handleLogout() {
@@ -184,21 +211,21 @@ export function useWorkspaceData() {
       const updatedGraph =
         draft.mode === "create"
           ? await createRelative({
-              anchorPersonId: draft.personId,
-              relation: draft.relation,
+            anchorPersonId: draft.personId,
+            relation: draft.relation,
+            firstName: draft.firstName,
+            lastName: draft.lastName,
+            note: draft.note || undefined,
+            birthDate: draft.birthDate || undefined,
+          })
+          : draft.mode === "edit"
+            ? await updatePerson({
+              personId: draft.personId,
               firstName: draft.firstName,
               lastName: draft.lastName,
               note: draft.note || undefined,
               birthDate: draft.birthDate || undefined,
             })
-          : draft.mode === "edit"
-            ? await updatePerson({
-                personId: draft.personId,
-                firstName: draft.firstName,
-                lastName: draft.lastName,
-                note: draft.note || undefined,
-                birthDate: draft.birthDate || undefined,
-              })
             : await deletePerson(draft.personId);
 
       setGraph(updatedGraph);
@@ -225,10 +252,10 @@ export function useWorkspaceData() {
         persons: current.persons.map((person) =>
           person.id === personId
             ? {
-                ...person,
-                x: position.x,
-                y: position.y,
-              }
+              ...person,
+              x: position.x,
+              y: position.y,
+            }
             : person,
         ),
       };
@@ -254,6 +281,8 @@ export function useWorkspaceData() {
     loading,
     loggingOut,
     draft,
+    selectedPerson,
+    selectedPersonId,
     pending,
     headerName,
     unionChildLinkCount,
@@ -262,6 +291,7 @@ export function useWorkspaceData() {
     openDeleteDraft,
     updateDraft,
     closeDraft,
+    selectPerson,
     handleLogout,
     handleSubmitDraft,
     movePersonLocally,

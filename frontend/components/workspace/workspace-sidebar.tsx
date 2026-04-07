@@ -5,10 +5,15 @@ import type { PersonDraft } from "@/components/workspace/types";
 
 type WorkspaceSidebarProps = {
   graph: TreeGraph;
+  selectedPerson: TreeGraph["persons"][number] | null;
   draft: PersonDraft | null;
   pending: boolean;
   error: string | null;
   unionChildLinkCount: number;
+  onAddParent: () => void;
+  onAddChild: () => void;
+  onEditPerson: () => void;
+  onDeletePerson: () => void;
   onDraftChange: (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => void;
@@ -18,19 +23,32 @@ type WorkspaceSidebarProps = {
 
 export function WorkspaceSidebar({
   graph,
+  selectedPerson,
   draft,
   pending,
   error,
   unionChildLinkCount,
+  onAddParent,
+  onAddChild,
+  onEditPerson,
+  onDeletePerson,
   onDraftChange,
   onSubmit,
   onCancel,
 }: WorkspaceSidebarProps) {
-  const title = getSidebarTitle(draft);
-  const eyebrow = draft ? getSidebarEyebrow(draft) : "Tree overview";
+  const title = draft
+    ? getSidebarTitle(draft)
+    : selectedPerson
+      ? `${selectedPerson.firstName} ${selectedPerson.lastName}`.trim()
+      : "Choose a node";
+  const eyebrow = draft
+    ? getSidebarEyebrow(draft)
+    : selectedPerson
+      ? "Selected person"
+      : "Tree overview";
 
   return (
-    <aside className="fixed inset-y-0 right-0 z-30 w-[380px] border-l border-[var(--line-soft)] bg-white/86 backdrop-blur-xl">
+    <aside className="fixed inset-y-0 right-0 z-30 w-[380px] border-l border-[var(--line-soft)] bg-[rgba(8,12,20,0.9)] backdrop-blur-xl">
       <div className="h-full overflow-y-auto px-6 pb-6 pt-[108px]">
         <p className="text-sm font-semibold tracking-[0.2em] text-[var(--accent-strong)] uppercase">
           {eyebrow}
@@ -44,7 +62,7 @@ export function WorkspaceSidebar({
           workspace.
         </p>
 
-        <div className="mt-6 rounded-[24px] border border-[var(--line-soft)] bg-[var(--surface-muted)]/55 p-4 text-sm text-[var(--ink-soft)]">
+        <div className="mt-6 rounded-[24px] border border-[var(--line-soft)] bg-[rgba(255,255,255,0.03)] p-4 text-sm text-[var(--ink-soft)]">
           <p>
             <span className="font-semibold text-[var(--ink-strong)]">
               {graph.persons.length}
@@ -66,7 +84,7 @@ export function WorkspaceSidebar({
         </div>
 
         {error ? (
-          <section className="mt-5 rounded-[24px] border border-[#d8b5a5] bg-[#fff1ec] p-4 text-sm text-[#8f4226]">
+          <section className="mt-5 rounded-[24px] border border-[rgba(255,120,120,0.28)] bg-[rgba(255,120,120,0.1)] p-4 text-sm text-[#f0a3a3]">
             {error}
           </section>
         ) : null}
@@ -86,8 +104,8 @@ export function WorkspaceSidebar({
                 className={[
                   "rounded-full px-5 py-3 text-sm font-semibold text-white transition disabled:opacity-70",
                   draft.mode === "delete"
-                    ? "bg-[#8f4226] hover:bg-[#7a391f]"
-                    : "bg-[var(--ink-strong)] hover:bg-[#2c2520]",
+                    ? "bg-[#aa5a42] hover:bg-[#8f4a35]"
+                    : "bg-[var(--ink-strong)] hover:bg-[#fff3d6] hover:text-[#08101d]",
                 ].join(" ")}
               >
                 {getSubmitLabel(draft, pending)}
@@ -95,17 +113,67 @@ export function WorkspaceSidebar({
               <button
                 type="button"
                 onClick={onCancel}
-                className="rounded-full border border-[var(--line-strong)] bg-[var(--surface-muted)] px-5 py-3 text-sm font-semibold text-[var(--ink-strong)] transition hover:border-[var(--accent-strong)] hover:bg-[var(--accent-soft)]"
+                className="rounded-full border border-[var(--line-strong)] bg-[var(--surface-muted)] px-5 py-3 text-sm font-semibold text-[var(--ink-strong)] transition hover:border-[var(--accent-strong)] hover:bg-[rgba(208,160,96,0.12)]"
               >
                 Cancel
               </button>
             </div>
           </form>
+        ) : selectedPerson ? (
+          <div className="mt-6 space-y-4">
+            <div className="rounded-[24px] border border-[var(--line-soft)] bg-[rgba(255,255,255,0.03)] p-5">
+              <p className="text-lg font-semibold text-[var(--ink-strong)]">
+                {selectedPerson.firstName} {selectedPerson.lastName}
+              </p>
+              <p className="mt-2 text-sm leading-7 text-[var(--ink-soft)]">
+                {selectedPerson.note || "No note yet."}
+              </p>
+              <p className="mt-2 text-xs text-[var(--ink-soft)]">
+                Birth date: {selectedPerson.birthDate || "Not set"}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={onAddParent}
+                className="rounded-full border border-[var(--line-strong)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold text-[var(--ink-strong)] transition hover:border-[var(--accent-strong)] hover:bg-[rgba(208,160,96,0.12)]"
+              >
+                Add parent
+              </button>
+              <button
+                type="button"
+                onClick={onAddChild}
+                className="rounded-full border border-[var(--line-strong)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold text-[var(--ink-strong)] transition hover:border-[var(--accent-strong)] hover:bg-[rgba(208,160,96,0.12)]"
+              >
+                Add child
+              </button>
+              <button
+                type="button"
+                onClick={onEditPerson}
+                className="rounded-full border border-[var(--line-strong)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold text-[var(--ink-strong)] transition hover:border-[var(--accent-strong)] hover:bg-[rgba(208,160,96,0.12)]"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={onDeletePerson}
+                disabled={selectedPerson.isRoot}
+                title={
+                  selectedPerson.isRoot
+                    ? "The root person cannot be deleted"
+                    : undefined
+                }
+                className="rounded-full border border-[rgba(255,120,120,0.28)] px-4 py-2 text-sm font-semibold text-[#f09a9a] transition hover:bg-[rgba(255,120,120,0.12)] disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
         ) : (
-          <div className="mt-6 rounded-[24px] border border-dashed border-[var(--line-strong)] bg-[var(--surface-muted)]/60 p-5 text-sm leading-7 text-[var(--ink-soft)]">
-            Select a node action on the canvas to add a parent, add a child,
-            edit a person, or remove a branch member. The root person can be
-            edited but not deleted.
+          <div className="mt-6 rounded-[24px] border border-dashed border-[var(--line-strong)] bg-[rgba(255,255,255,0.03)] p-5 text-sm leading-7 text-[var(--ink-soft)]">
+            Select a person node to view details and run actions from this
+            panel. The root person can be edited but not deleted.
           </div>
         )}
       </div>
@@ -133,7 +201,7 @@ function EditFields({
           value={draft.firstName}
           onChange={onDraftChange}
           type="text"
-          className="w-full rounded-2xl border border-[var(--line-soft)] bg-white px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
+          className="w-full rounded-2xl border border-[var(--line-soft)] bg-[rgba(255,255,255,0.03)] px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
         />
       </label>
       <label className="block">
@@ -146,7 +214,7 @@ function EditFields({
           onChange={onDraftChange}
           type="text"
           placeholder="Optional"
-          className="w-full rounded-2xl border border-[var(--line-soft)] bg-white px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
+          className="w-full rounded-2xl border border-[var(--line-soft)] bg-[rgba(255,255,255,0.03)] px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
         />
       </label>
       <label className="block">
@@ -158,8 +226,12 @@ function EditFields({
           value={draft.note}
           onChange={onDraftChange}
           type="text"
-          placeholder={draft.mode === "create" ? getCreateNotePlaceholder(draft) : "Optional"}
-          className="w-full rounded-2xl border border-[var(--line-soft)] bg-white px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
+          placeholder={
+            draft.mode === "create"
+              ? getCreateNotePlaceholder(draft)
+              : "Optional"
+          }
+          className="w-full rounded-2xl border border-[var(--line-soft)] bg-[rgba(255,255,255,0.03)] px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
         />
       </label>
       <label className="block">
@@ -171,7 +243,7 @@ function EditFields({
           value={draft.birthDate}
           onChange={onDraftChange}
           type="date"
-          className="w-full rounded-2xl border border-[var(--line-soft)] bg-white px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
+          className="w-full rounded-2xl border border-[var(--line-soft)] bg-[rgba(255,255,255,0.03)] px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
         />
       </label>
     </div>
@@ -185,19 +257,26 @@ function DeletePanel({
   draft: Extract<PersonDraft, { mode: "delete" }>;
   pending: boolean;
 }) {
-  const fullName = [draft.firstName, draft.lastName].filter(Boolean).join(" ").trim();
+  const fullName = [draft.firstName, draft.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
 
   return (
-    <div className="rounded-[24px] border border-[#e7c6b7] bg-[#fff7f3] p-5 text-sm leading-7 text-[#8f4226]">
-      <p className="font-semibold text-[#7a391f]">
+    <div className="rounded-[24px] border border-[rgba(255,120,120,0.22)] bg-[rgba(255,120,120,0.08)] p-5 text-sm leading-7 text-[#f0a3a3]">
+      <p className="font-semibold text-[#ffd1d1]">
         Remove {fullName || "this person"} from the tree?
       </p>
       <p className="mt-2">
-        This removes the person record and detaches related connectors. The
-        root person stays protected and cannot be deleted.
+        This removes the person record and detaches related connectors. The root
+        person stays protected and cannot be deleted.
       </p>
-      {draft.note ? <p className="mt-3 text-[#9a5739]">Note: {draft.note}</p> : null}
-      {pending ? <p className="mt-3 text-[#9a5739]">Applying changes...</p> : null}
+      {draft.note ? (
+        <p className="mt-3 text-[#f0b0b0]">Note: {draft.note}</p>
+      ) : null}
+      {pending ? (
+        <p className="mt-3 text-[#f0b0b0]">Applying changes...</p>
+      ) : null}
     </div>
   );
 }
@@ -247,7 +326,9 @@ function getSubmitLabel(draft: PersonDraft, pending: boolean) {
   }
 }
 
-function getCreateNotePlaceholder(draft: Extract<PersonDraft, { mode: "create" }>) {
+function getCreateNotePlaceholder(
+  draft: Extract<PersonDraft, { mode: "create" }>,
+) {
   return draft.relation === "parent"
     ? "mom, dad, guardian..."
     : "son, daughter, child...";

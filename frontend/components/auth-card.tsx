@@ -85,7 +85,7 @@ export function AuthCard({
   }
 
   return (
-    <section className="w-full max-w-md rounded-[32px] border border-[var(--line-soft)] bg-white/82 p-8 shadow-[0_24px_90px_rgba(31,27,24,0.12)] backdrop-blur">
+    <section className="w-full max-w-md rounded-[32px] border border-[var(--line-soft)] bg-[rgba(10,15,25,0.84)] p-8 shadow-[0_24px_90px_rgba(0,0,0,0.28)] backdrop-blur">
       <p className="text-xs font-semibold tracking-[0.22em] text-[var(--accent-strong)] uppercase">
         {eyebrow}
       </p>
@@ -111,7 +111,7 @@ export function AuthCard({
                 onChange={handleChange}
                 type="text"
                 placeholder="Avery"
-                className="w-full rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
+                className="w-full rounded-2xl border border-[var(--line-soft)] bg-[rgba(255,255,255,0.03)] px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
               />
             </label>
             <label className="block">
@@ -124,7 +124,7 @@ export function AuthCard({
                 onChange={handleChange}
                 type="text"
                 placeholder="Optional"
-                className="w-full rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
+                className="w-full rounded-2xl border border-[var(--line-soft)] bg-[rgba(255,255,255,0.03)] px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
               />
             </label>
           </div>
@@ -139,7 +139,7 @@ export function AuthCard({
             onChange={handleChange}
             type="email"
             placeholder="you@example.com"
-            className="w-full rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
+            className="w-full rounded-2xl border border-[var(--line-soft)] bg-[rgba(255,255,255,0.03)] px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
           />
         </label>
         <label className="block">
@@ -154,18 +154,18 @@ export function AuthCard({
             placeholder={
               isRegister ? "At least 8 characters" : "Enter your password"
             }
-            className="w-full rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
+            className="w-full rounded-2xl border border-[var(--line-soft)] bg-[rgba(255,255,255,0.03)] px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
           />
         </label>
         {error ? (
-          <p className="rounded-2xl border border-[#d8b5a5] bg-[#fff1ec] px-4 py-3 text-sm text-[#8f4226]">
+          <p className="rounded-2xl border border-[rgba(255,120,120,0.28)] bg-[rgba(255,120,120,0.1)] px-4 py-3 text-sm text-[#f0a3a3]">
             {error}
           </p>
         ) : null}
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded-full bg-[var(--ink-strong)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#2c2520] disabled:cursor-not-allowed disabled:opacity-70"
+          className="w-full rounded-full bg-[var(--ink-strong)] px-5 py-3 text-sm font-semibold text-[#07101d] transition hover:bg-[#fff3d6] disabled:cursor-not-allowed disabled:opacity-70"
         >
           {pending ? "Please wait..." : submitLabel}
         </button>

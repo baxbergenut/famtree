@@ -29,20 +29,29 @@ export function PersonNodePreview({
       data-node-card="true"
       className={[
         compact ? "w-60" : "w-64",
-        "select-none rounded-[28px] border bg-white/88 p-5 shadow-[0_24px_80px_rgba(34,27,22,0.12)] backdrop-blur transition-shadow",
-        isDragging ? "cursor-grabbing shadow-[0_30px_110px_rgba(34,27,22,0.2)]" : "cursor-grab",
+        "relative isolate select-none overflow-visible rounded-[28px] border bg-[rgba(28,36,56,0.96)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.36)] backdrop-blur transition-shadow",
+        isDragging
+          ? "cursor-grabbing shadow-[0_30px_110px_rgba(0,0,0,0.38)]"
+          : "cursor-grab",
         highlighted
-          ? "border-[var(--accent-strong)] ring-2 ring-[var(--accent-soft)]"
-          : "border-[var(--line-soft)]",
+          ? "border-[rgba(140,190,255,0.78)] shadow-[0_0_0_1px_rgba(140,190,255,0.4),0_0_36px_rgba(88,153,255,0.58),0_0_84px_rgba(70,126,255,0.46),0_32px_110px_rgba(18,36,86,0.52)]"
+          : "border-[rgba(255,255,255,0.18)]",
       ].join(" ")}
     >
+      {highlighted ? (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -inset-7 -z-10 rounded-[40px] bg-[radial-gradient(circle,rgba(98,168,255,0.68)_0%,rgba(72,136,255,0.4)_42%,rgba(35,76,184,0.12)_74%,rgba(14,26,68,0)_100%)] blur-2xl"
+        />
+      ) : null}
+
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
           <div
             className={[
               "flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border text-lg font-semibold",
               highlighted
-                ? "border-[var(--accent-strong)] bg-[var(--accent-soft)] text-[var(--accent-strong)]"
+                ? "border-[var(--accent-strong)] bg-[rgba(208,160,96,0.16)] text-[var(--accent-strong)]"
                 : "border-[var(--line-strong)] bg-[var(--surface-muted)] text-[var(--ink-soft)]",
             ].join(" ")}
             aria-hidden="true"
@@ -69,32 +78,7 @@ export function PersonNodePreview({
             ) : null}
           </div>
         </div>
-        {highlighted ? (
-          <span className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-[11px] font-semibold tracking-[0.18em] text-[var(--accent-strong)] uppercase">
-            Me
-          </span>
-        ) : null}
       </div>
-      {(onAddParent || onAddChild) ? (
-        <div className="mt-5 flex gap-2">
-          <button
-            type="button"
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={onAddParent}
-            className="rounded-full border border-[var(--line-soft)] px-3 py-2 text-xs font-medium text-[var(--ink-soft)] transition hover:border-[var(--accent-strong)] hover:bg-[var(--accent-soft)]"
-          >
-            Add parent
-          </button>
-          <button
-            type="button"
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={onAddChild}
-            className="rounded-full border border-[var(--line-soft)] px-3 py-2 text-xs font-medium text-[var(--ink-soft)] transition hover:border-[var(--accent-strong)] hover:bg-[var(--accent-soft)]"
-          >
-            Add child
-          </button>
-        </div>
-      ) : null}
     </article>
   );
 }

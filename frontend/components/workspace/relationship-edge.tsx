@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  BaseEdge,
-  getBezierPath,
-  type EdgeProps,
-} from "@xyflow/react";
+import { BaseEdge, getBezierPath, type EdgeProps } from "@xyflow/react";
 
 export function RelationshipEdge({
   sourceX,
@@ -28,7 +24,7 @@ export function RelationshipEdge({
     <BaseEdge
       path={path}
       style={{
-        stroke: "rgba(158, 111, 55, 0.44)",
+        stroke: "rgba(208, 160, 96, 0.42)",
         strokeWidth: 2.2,
         strokeLinecap: "round",
       }}

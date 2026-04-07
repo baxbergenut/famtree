@@ -48,8 +48,18 @@ export function WorkspaceSidebar({
       : "Tree overview";
 
   return (
-    <aside className="fixed inset-y-0 right-0 z-30 w-[380px] border-l border-[var(--line-soft)] bg-[rgba(8,12,20,0.9)] backdrop-blur-xl">
-      <div className="h-full overflow-y-auto px-6 pb-6 pt-[108px]">
+    <aside
+      className="apple-liquid-panel apple-liquid-regular z-30 rounded-[34px]"
+      style={{
+        position: "fixed",
+        top: "96px",
+        right: "16px",
+        bottom: "16px",
+        left: "auto",
+        width: "380px",
+      }}
+    >
+      <div className="h-full overflow-y-auto px-6 pb-6 pt-6">
         <p className="text-sm font-semibold tracking-[0.2em] text-[var(--accent-strong)] uppercase">
           {eyebrow}
         </p>
@@ -62,7 +72,7 @@ export function WorkspaceSidebar({
           workspace.
         </p>
 
-        <div className="mt-6 rounded-[24px] border border-[var(--line-soft)] bg-[rgba(255,255,255,0.03)] p-4 text-sm text-[var(--ink-soft)]">
+        <div className="apple-liquid-badge mt-6 rounded-[24px] p-4 text-sm text-[var(--ink-soft)]">
           <p>
             <span className="font-semibold text-[var(--ink-strong)]">
               {graph.persons.length}
@@ -121,7 +131,7 @@ export function WorkspaceSidebar({
           </form>
         ) : selectedPerson ? (
           <div className="mt-6 space-y-4">
-            <div className="rounded-[24px] border border-[var(--line-soft)] bg-[rgba(255,255,255,0.03)] p-5">
+            <div className="apple-liquid-badge rounded-[24px] p-5">
               <p className="text-lg font-semibold text-[var(--ink-strong)]">
                 {selectedPerson.firstName} {selectedPerson.lastName}
               </p>
@@ -171,7 +181,7 @@ export function WorkspaceSidebar({
             </div>
           </div>
         ) : (
-          <div className="mt-6 rounded-[24px] border border-dashed border-[var(--line-strong)] bg-[rgba(255,255,255,0.03)] p-5 text-sm leading-7 text-[var(--ink-soft)]">
+          <div className="apple-liquid-badge mt-6 rounded-[24px] border border-dashed border-[rgba(255,255,255,0.34)] p-5 text-sm leading-7 text-[var(--ink-soft)]">
             Select a person node to view details and run actions from this
             panel. The root person can be edited but not deleted.
           </div>
@@ -201,7 +211,7 @@ function EditFields({
           value={draft.firstName}
           onChange={onDraftChange}
           type="text"
-          className="w-full rounded-2xl border border-[var(--line-soft)] bg-[rgba(255,255,255,0.03)] px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
+          className="apple-liquid-badge w-full rounded-2xl px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
         />
       </label>
       <label className="block">
@@ -214,7 +224,7 @@ function EditFields({
           onChange={onDraftChange}
           type="text"
           placeholder="Optional"
-          className="w-full rounded-2xl border border-[var(--line-soft)] bg-[rgba(255,255,255,0.03)] px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
+          className="apple-liquid-badge w-full rounded-2xl px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
         />
       </label>
       <label className="block">
@@ -231,7 +241,7 @@ function EditFields({
               ? getCreateNotePlaceholder(draft)
               : "Optional"
           }
-          className="w-full rounded-2xl border border-[var(--line-soft)] bg-[rgba(255,255,255,0.03)] px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
+          className="apple-liquid-badge w-full rounded-2xl px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
         />
       </label>
       <label className="block">
@@ -243,7 +253,7 @@ function EditFields({
           value={draft.birthDate}
           onChange={onDraftChange}
           type="date"
-          className="w-full rounded-2xl border border-[var(--line-soft)] bg-[rgba(255,255,255,0.03)] px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
+          className="apple-liquid-badge w-full rounded-2xl px-4 py-3 text-sm text-[var(--ink-strong)] outline-none transition focus:border-[var(--accent-strong)]"
         />
       </label>
     </div>

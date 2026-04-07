@@ -15,7 +15,7 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "famtree",
+  title: "famdawg",
   description: "A modern family tree builder on an infinite-style canvas.",
 };
 

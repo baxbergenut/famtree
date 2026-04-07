@@ -2,7 +2,7 @@
 
 ## 1. Project summary
 
-`famtree` is a family tree web app centered around a borderless canvas where a signed-in user builds a personal family graph visually.
+`famdawg` is a family tree web app centered around a borderless canvas where a signed-in user builds a personal family graph visually.
 
 The scaffold currently supports:
 

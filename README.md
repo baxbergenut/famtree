@@ -1,4 +1,4 @@
-# famtree
+# famdawg
 
 Modern family tree builder for creating and exploring a personal family graph on a borderless canvas.
 
@@ -21,7 +21,7 @@ Still intentionally unfinished:
 
 ## Product model
 
-`famtree` is a visual family tree web app where the signed-in user lands on a canvas centered on their own highlighted root person node. From there they can add parents and children and gradually build a readable family graph.
+`famdawg` is a visual family tree web app where the signed-in user lands on a canvas centered on their own highlighted root person node. From there they can add parents and children and gradually build a readable family graph.
 
 Each person node supports:
 
@@ -186,7 +186,7 @@ Runs the Go API on `http://localhost:8081` by default.
 
 ### PostgreSQL setup
 
-1. Create the `famtree` database.
+1. Create the `famdawg` database.
 2. Apply `init.sql`.
 3. Set `DATABASE_URL` for the backend before starting the API.
 

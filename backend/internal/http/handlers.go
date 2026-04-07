@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"famtree/backend/internal/auth"
-	"famtree/backend/internal/config"
-	"famtree/backend/internal/tree"
+	"famdawg/backend/internal/auth"
+	"famdawg/backend/internal/config"
+	"famdawg/backend/internal/tree"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -24,7 +24,7 @@ func healthHandler(cfg config.Config) http.HandlerFunc {
 func versionHandler(cfg config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{
-			"service": "famtree-api",
+			"service": "famdawg-api",
 			"env":     cfg.AppEnv,
 			"time":    time.Now().UTC().Format(time.RFC3339),
 		})

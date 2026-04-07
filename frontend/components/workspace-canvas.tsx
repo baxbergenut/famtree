@@ -13,12 +13,10 @@ export function WorkspaceCanvas() {
     graph,
     error,
     loading,
-    loggingOut,
     draft,
     selectedPerson,
     selectedPersonId,
     pending,
-    headerName,
     unionChildLinkCount,
     openCreateDraft,
     openEditDraft,
@@ -26,7 +24,6 @@ export function WorkspaceCanvas() {
     updateDraft,
     closeDraft,
     selectPerson,
-    handleLogout,
     handleSubmitDraft,
     movePersonLocally,
     persistPersonPosition,
@@ -82,12 +79,7 @@ export function WorkspaceCanvas() {
         />
       </div>
 
-      <WorkspaceHeader
-        headerName={headerName}
-        email={user.email}
-        loggingOut={loggingOut}
-        onLogout={handleLogout}
-      />
+      <WorkspaceHeader />
 
       <WorkspaceSidebar
         graph={graph}

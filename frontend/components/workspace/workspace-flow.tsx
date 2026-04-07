@@ -177,7 +177,7 @@ function WorkspaceFlowInner({
         <button
           type="button"
           onClick={() => centerRoot(220)}
-          className="pointer-events-auto rounded-full border border-[var(--line-strong)] bg-[rgba(10,15,25,0.86)] px-4 py-2 text-sm font-medium text-[var(--ink-soft)] shadow-[0_12px_40px_rgba(0,0,0,0.28)] transition hover:border-[var(--accent-strong)] hover:text-[var(--ink-strong)]"
+          className="apple-liquid-pill apple-liquid-interactive pointer-events-auto rounded-full px-4 py-2 text-sm font-medium text-(--ink-strong)"
         >
           Center root
         </button>

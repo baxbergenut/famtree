@@ -1,5 +1,5 @@
 param(
-  [string]$DbName = "famtree",
+  [string]$DbName = "famdawg",
   [string]$DbUser = "postgres",
   [string]$DbHost = "127.0.0.1",
   [int]$DbPort = 5432

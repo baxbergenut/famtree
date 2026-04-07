@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This file defines the working rules for engineers and coding agents contributing to `famtree`.
+This file defines the working rules for engineers and coding agents contributing to `famdawg`.
 
 ## Project intent
 

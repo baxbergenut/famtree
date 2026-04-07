@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"net/http"
 
-	"famtree/backend/internal/auth"
-	"famtree/backend/internal/config"
-	"famtree/backend/internal/tree"
+	"famdawg/backend/internal/auth"
+	"famdawg/backend/internal/config"
+	"famdawg/backend/internal/tree"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"

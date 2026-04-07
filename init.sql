@@ -1,5 +1,5 @@
--- famtree initial database setup
--- Apply this file against the `famtree` database after creating it.
+-- famdawg initial database setup
+-- Apply this file against the `famdawg` database after creating it.
 
 BEGIN;
 

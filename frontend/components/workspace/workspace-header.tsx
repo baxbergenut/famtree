@@ -2,51 +2,22 @@
 
 import Link from "next/link";
 
-type WorkspaceHeaderProps = {
-  headerName: string;
-  email: string;
-  loggingOut: boolean;
-  onLogout: () => void;
-};
-
-export function WorkspaceHeader({
-  headerName,
-  email,
-  loggingOut,
-  onLogout,
-}: WorkspaceHeaderProps) {
+export function WorkspaceHeader() {
   return (
-    <header className="fixed left-0 right-0 top-0 z-30 flex h-[84px] items-center justify-between px-6 lg:px-8">
-      <div className="flex items-center gap-3 rounded-full border border-[var(--line-soft)] bg-[rgba(10,15,25,0.82)] px-4 py-3 shadow-[0_16px_48px_rgba(0,0,0,0.28)] backdrop-blur">
+    <header className="fixed left-0 right-0 top-0 z-30 flex h-[84px] items-center px-6 lg:px-8">
+      <div className="apple-liquid-panel apple-liquid-regular flex items-center gap-3 rounded-[28px] px-4 py-3">
         <Link
           href="/"
-          className="flex items-center gap-3 text-sm font-semibold tracking-[0.28em] text-[var(--ink-strong)] uppercase"
+          className="flex items-center gap-3 text-sm font-semibold tracking-[0.28em] text-(--ink-strong) uppercase"
         >
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[rgba(255,255,255,0.05)] text-base shadow-[0_8px_24px_rgba(0,0,0,0.24)]">
+          <span className="apple-liquid-badge inline-flex h-10 w-10 items-center justify-center rounded-full text-base font-bold text-white">
             F
           </span>
-          famtree
+          famdawg
         </Link>
-        <span className="rounded-full bg-[rgba(208,160,96,0.16)] px-3 py-2 text-xs font-semibold tracking-[0.2em] text-[var(--accent-strong)] uppercase">
+        <span className="apple-liquid-badge rounded-full px-3 py-2 text-xs font-semibold tracking-[0.2em] text-(--ink-strong) uppercase">
           Canvas
         </span>
-      </div>
-
-      <div className="flex items-center gap-3 rounded-full border border-[var(--line-soft)] bg-[rgba(10,15,25,0.82)] px-4 py-3 shadow-[0_16px_48px_rgba(0,0,0,0.28)] backdrop-blur">
-        <div className="hidden text-right lg:block">
-          <p className="text-sm font-semibold text-[var(--ink-strong)]">
-            {headerName}
-          </p>
-          <p className="text-xs text-[var(--ink-soft)]">{email}</p>
-        </div>
-        <button
-          type="button"
-          onClick={onLogout}
-          disabled={loggingOut}
-          className="rounded-full border border-[var(--line-strong)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold text-[var(--ink-strong)] transition hover:border-[var(--accent-strong)] hover:bg-[rgba(208,160,96,0.12)] disabled:opacity-70"
-        >
-          {loggingOut ? "Logging out..." : "Log out"}
-        </button>
       </div>
     </header>
   );

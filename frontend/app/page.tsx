@@ -17,7 +17,7 @@ export default function Home() {
               A family tree workspace that starts with you.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-8 text-(--ink-soft)">
-              famtree is a calm, modern canvas for mapping parents, children,
+              famdawg is a calm, modern canvas for mapping parents, children,
               and union nodes without forcing your family into a cramped form.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">

@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"famtree/backend/internal/config"
-	apihttp "famtree/backend/internal/http"
-	"famtree/backend/internal/store"
+	"famdawg/backend/internal/config"
+	apihttp "famdawg/backend/internal/http"
+	"famdawg/backend/internal/store"
 )
 
 func main() {
@@ -31,7 +31,7 @@ func main() {
 		IdleTimeout:       60 * time.Second,
 	}
 
-	log.Printf("famtree api listening on http://localhost:%s", cfg.Port)
+	log.Printf("famdawg api listening on http://localhost:%s", cfg.Port)
 
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
